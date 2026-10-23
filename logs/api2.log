@@ -63,3 +63,4 @@ INFO:     127.0.0.1:48218 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
 INFO:     127.0.0.1:48178 - "GET /v2/live/overlays/biodiversity?lat=59.9&lon=23.5 HTTP/1.1" 200 OK
 INFO:     127.0.0.1:42010 - "GET /v2/live/collision HTTP/1.1" 200 OK
 INFO:     127.0.0.1:42026 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36012 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
