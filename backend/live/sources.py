@@ -206,36 +206,26 @@ def gbif_occurrences(lat: float, lon: float, radius_deg: float = 0.5, size: int 
     return cached(f"gbif-{lat:.1f}-{lon:.1f}", 86400, fetch)
 
 
-# ---------- Bathymetry: NOAA ERDDAP etopo180 grid (keyless) ----------
+# ---------- Bathymetry: EMODnet 2018 DTM via OpenTopoData (keyless, batch) ----------
 
-def etopo_depth_track(lats: list[float], lons: list[float]) -> list[float]:
-    """Depth (m, positive down) at each track point via ERDDAP strided query."""
-
-    def fetch():
-        try:
-            la = f"[({min(lats):.2f}):1:({max(lats):.2f})]"
-            lo = f"[({min(lons):.2f}):1:({max(lons):.2f})]"
-            r = _get("https://coastwatch.pfeg.noaa.gov/erddap/griddap/etopo180.csvp",
-                     params={"altitude": la + lo}, timeout=45)
-            lines = r.text.strip().splitlines()
-            grid: dict[tuple[float, float], float] = {}
-            for ln in lines[1:]:
-                parts = [x.strip('"') for x in ln.split(",")]
-                grid[(round(float(parts[1]), 2), round(float(parts[2]), 2))] = float(parts[-1])
-
-            def nearest_cell(lat: float, lon: float) -> float:  # NN fill; 1° grid error ≪ contour width
-                keys = np.array(list(grid.keys()))
-                vals = np.array([grid[k] for k in map(tuple, keys)])
-                i = np.argmin((keys[:, 0] - lat) ** 2 + (keys[:, 1] - lon) ** 2)
-                return float(vals[i])
-
-            return [nearest_cell(a, b) for a, b in zip(lats, lons)]
-        except requests.RequestException:
-            return []
-
+def bathy_depths(lats: list[float], lons: list[float]) -> list[float | None]:
+    """Depth (m, positive down) per point. OpenTopoData free tier: 100 locs/call, 1 req/s."""
     if not lats:
         return []
-    return cached(f"etopo-{min(lats):.1f}-{max(lats):.1f}-{min(lons):.1f}", 86400, fetch)
+    out: list[float | None] = []
+    for i in range(0, len(lats), 100):
+        chunk = [f"{a:.5f},{b:.5f}" for a, b in zip(lats[i:i + 100], lons[i:i + 100])]
+        try:
+            r = _get("https://api.opentopodata.org/v1/emod2018",
+                     params={"locations": "|".join(chunk)}, timeout=40)
+            for res in r.json().get("results", []):
+                z = res.get("elevation")
+                out.append(None if z is None else float(z))
+        except requests.RequestException:
+            out.extend([None] * len(chunk))
+        if i + 100 < len(lats):
+            time.sleep(1.1)   # free-tier 1 req/s
+    return out
 
 
 # ---------- Marine Regions MPAs (keyless WFS) ----------

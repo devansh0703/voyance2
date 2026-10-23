@@ -236,6 +236,8 @@ if WEB_DIST.exists():
 
     @app.get("/")
     @app.get("/dashboard")
+    @app.get("/live")
+    @app.get("/analytics")
     @app.get("/research")
     @app.get("/docs")
     def spa():

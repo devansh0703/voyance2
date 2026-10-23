@@ -1,0 +1,5 @@
+gpu_rf: {'model': 'xgboost GPU random-forest (num_parallel_tree=100)', 'mae_h': 6.491, 'rows': 10366, 'test_rows': 8227}
+train_v2 done: {"gpu_random_forest": {"model": "xgboost GPU random-forest (num_parallel_tree=100)", "mae_h": 6.491, "rows": 10366, "test_rows": 8227}, "anomaly_ensemble": "fitted on train rows", "hmm_sog": {"states": 3, "means_kn": [9.85, 9.86, 9.85]}}
+ports-clustered: 4888
+graph nodes/edges: 4888 618556
+h3 resolutions: [3, 4, 5] | anchorage clusters: 6

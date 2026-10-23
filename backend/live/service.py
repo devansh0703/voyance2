@@ -34,18 +34,16 @@ def _load(name: str):
         return pickle.load(f)
 
 
-@lru_cache_r()
+from functools import lru_cache  # noqa: E402
+
+
+@lru_cache(maxsize=1)
 def _hist():
-    f = ART / "samples-2024-07.parquet"
+    f = ROOT / "data" / "interim" / "samples-2024-07.parquet"
     if not f.exists():
         return None
     df = pd.read_parquet(f)
     return df[df["vessel_type_group"].isin(["cargo", "tanker", "passenger"])]
-
-
-def lru_cache_r():
-    from functools import lru_cache
-    return lru_cache(maxsize=1)()
 
 
 # ---------- live vessels + tracking ----------
@@ -124,8 +122,8 @@ def collision_watch(top: int = 12):
                 "distance_nm": round(float(d[0]), 2),
                 "dcpa_nm": round(dcpa, 2), "tcpa_min": round(tcpa, 1) if tcpa else None,
                 "cri": round(cri, 3),
-                "domain_intrusion": kinematics.in_goodwin_stanton(
-                    dcpa, 0.0, float(a["sog"])),
+                "domain_intrusion": bool(kinematics.in_goodwin_stanton(
+                    dcpa, 0.0, float(a["sog"]))),
             })
     out.sort(key=lambda x: -x["cri"])
     return {"pairs": out[:top], "model": "DCPA/TCPA + Goodwin-Stanton domain + fuzzy CRI"}
@@ -178,8 +176,8 @@ def bathymetry(voyage_id: str | None = None, lat: float | None = None, lon: floa
         lats, lons = [lat - 0.5, lat, lat + 0.5], [lon - 0.5, lon, lon + 0.5]
     else:
         raise HTTPException(400, "voyage_id or lat+lon required")
-    depths = sources.etopo_depth_track(lats, lons)
-    return {"source": "NOAA ETOPO1 via ERDDAP (public domain)",
+    depths = sources.bathy_depths(lats, lons)
+    return {"source": "EMODnet 2018 bathymetry via OpenTopoData (CC BY 4.0)",
             "profile": [{"lat": round(a, 3), "lon": round(b, 3), "depth_m": d}
                         for a, b, d in zip(lats, lons, depths)]}
 

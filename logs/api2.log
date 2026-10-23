@@ -1,0 +1,16 @@
+INFO:     Started server process [20152]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8010 (Press CTRL+C to quit)
+INFO:     127.0.0.1:59668 - "GET /live HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59668 - "GET /assets/index-JzI-QK3Y.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59676 - "GET /assets/index-VEtywO0e.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59714 - "GET /assets/maplibre-gl-worker.mjs?v=6.15.0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59680 - "GET /v2/live/collision HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59676 - "GET /v2/health-quality HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59668 - "GET /v2/live/vessels?limit=40 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59702 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59692 - "GET /v2/live/weather?lat=60.15&lon=24.95 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33424 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50122 - "GET /v2/live/collision HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53340 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
