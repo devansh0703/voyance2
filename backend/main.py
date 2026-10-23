@@ -42,6 +42,9 @@ app = FastAPI(
     description="Open-source maritime voyage intelligence: quantile ETA on AIS + ERA5.",
 )
 Instrumentator().instrument(app).expose(app)
+
+from backend.live.service import router as live_router  # noqa: E402
+app.include_router(live_router)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 

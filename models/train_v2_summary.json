@@ -1,0 +1,17 @@
+{
+  "gpu_random_forest": {
+    "model": "xgboost GPU random-forest (num_parallel_tree=100)",
+    "mae_h": 6.491,
+    "rows": 10366,
+    "test_rows": 8227
+  },
+  "anomaly_ensemble": "fitted on train rows",
+  "hmm_sog": {
+    "states": 3,
+    "means_kn": [
+      9.85,
+      9.86,
+      9.85
+    ]
+  }
+}

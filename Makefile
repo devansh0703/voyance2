@@ -25,3 +25,7 @@ api:
 	.venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port 8000
 
 .PHONY: data train drift web-data web api
+
+dev2:
+	@(.venv/bin/uvicorn backend.main:app --port 8000 &) ; cd web && bun run dev
+.PHONY: dev2

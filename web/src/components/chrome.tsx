@@ -72,38 +72,38 @@ export function Reveal({
 
 export function Footer() {
   return (
-    <footer className="mt-24 border-t border-mist/10 py-10 text-sm text-mist">
-      <div className="mx-auto grid max-w-6xl gap-6 px-6 md:grid-cols-4">
+    <footer className="mt-16 border-t border-rule py-8 text-xs text-dim">
+      <div className="mx-auto grid max-w-7xl gap-6 px-5 md:grid-cols-4">
         <div>
-          <div className="font-[family-name:var(--font-display)] font-bold text-foam">Voyance</div>
+          <div className="mono text-sm font-semibold text-paper">VOYANCE-II</div>
           <p className="mt-2 leading-relaxed">
             Open-source maritime voyage intelligence. Built on NOAA MarineCadastre AIS (CC0),
             Open-Meteo ERA5 reanalysis (CC BY 4.0), and UN/LOCODE.
           </p>
         </div>
         <div>
-          <div className="tag">Product</div>
+          <div className="microtype">Product</div>
           <ul className="mt-2 space-y-1">
-            <li><NavLink to="/dashboard" className="hover:text-bio">Live dashboards</NavLink></li>
-            <li><NavLink to="/docs" className="hover:text-bio">API & quickstart</NavLink></li>
-            <li><NavLink to="/research" className="hover:text-bio">Research</NavLink></li>
+            <li><NavLink to="/dashboard" className="hover:text-acc">Live dashboards</NavLink></li>
+            <li><NavLink to="/docs" className="hover:text-acc">API & quickstart</NavLink></li>
+            <li><NavLink to="/research" className="hover:text-acc">Research</NavLink></li>
           </ul>
         </div>
         <div>
-          <div className="tag">Data provenance</div>
+          <div className="microtype">Data provenance</div>
           <ul className="mt-2 space-y-1">
-            <li><a className="hover:text-bio" href="https://hub.marinecadastre.gov" target="_blank" rel="noreferrer">MarineCadastre AIS (CC0)</a></li>
-            <li><a className="hover:text-bio" href="https://open-meteo.com" target="_blank" rel="noreferrer">Open-Meteo ERA5 (CC BY 4.0)</a></li>
-            <li><a className="hover:text-bio" href="https://unece.org/trade/cefact/UNLOCODE-Download" target="_blank" rel="noreferrer">UN/LOCODE</a></li>
+            <li><a className="hover:text-acc" href="https://hub.marinecadastre.gov" target="_blank" rel="noreferrer">MarineCadastre AIS (CC0)</a></li>
+            <li><a className="hover:text-acc" href="https://open-meteo.com" target="_blank" rel="noreferrer">Open-Meteo ERA5 (CC BY 4.0)</a></li>
+            <li><a className="hover:text-acc" href="https://unece.org/trade/cefact/UNLOCODE-Download" target="_blank" rel="noreferrer">UN/LOCODE</a></li>
           </ul>
         </div>
         <div>
-          <div className="tag">License</div>
+          <div className="microtype">License</div>
           <p className="mt-2">Apache-2.0. Not a certified navigation aid; research and decision-support use.</p>
         </div>
       </div>
-      <div className="mx-auto mt-8 max-w-6xl px-6 text-xs text-mist/60">
-        © 2026 Voyance contributors · marine AI can be wrong: always verify against official sources
+      <div className="mx-auto mt-6 max-w-7xl px-5 text-[11px] text-dim/70">
+        © 2026 VOYANCE-II contributors · marine AI can be wrong: verify against official sources · built on open data, no signup
       </div>
     </footer>
   )
