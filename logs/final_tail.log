@@ -1,0 +1,31 @@
+/home/devansh/voyance/pipeline/train.py:119: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.
+  type_speed = train.groupby("vessel_type_group")["sog"].median().clip(2, 25)
+model rows: train 10,366 test 8,227
+/home/devansh/voyance/.venv/lib/python3.12/site-packages/xgboost/core.py:569: UserWarning: [03:17:53] WARNING: /__w/xgboost/xgboost/src/common/error_msg.cc:62: Falling back to prediction using DMatrix due to mismatched devices. This might lead to higher memory usage and slower performance. XGBoost is running on: cuda:0, while the input data is on: cpu.
+Potential solutions:
+- Use a data structure that matches the device ordinal in the booster.
+- Set the device for booster before call to inplace_predict.
+
+This warning will only be shown once.
+
+  return func(**kwargs)
+p10: best iter 1999
+p50: best iter 123
+p90: best iter 1999
+CQR adjustment: +2.73 h on each side (holdout n=1920)
+/home/devansh/voyance/pipeline/train.py:73: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.
+  med = df.groupby("vessel_type_group")["speed_kn"].median()
+XGB-GPU p50 MAE: 4.4874067306518555 h | LGBM-CPU: 5.7950816749606595 h | baseline: 5.351783275604248 h
+P10-P90 coverage: 0.830314817065759
+/home/devansh/voyance/pipeline/drift.py:41: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  preds = pd.concat([
+  2024-04: n=6,868 mae=5.98 drifted=0 alert=True
+  2024-07: n=8,227 mae=4.49 drifted=0 alert=False
+drift summary written
+stats.json: 8020 voyages
+map.json: 180 showcase voyages
+voyages.json (API): 1200
+copied eval.json -> eval.json
+copied drift_summary.json -> drift.json
+wrote /home/devansh/voyance/reports/voyance-report.md
+synced: gpu=4.49 cpu=5.80 prior=5.35 coverage=83.0% improvement=16.2%

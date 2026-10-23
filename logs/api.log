@@ -1,0 +1,13 @@
+INFO:     Started server process [3832935]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:55434 - "GET /dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55434 - "GET /assets/index-639eD8tM.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55446 - "GET /assets/index-Cazh-VyO.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55434 - "GET /data/map.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55446 - "GET /data/stats.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55434 - "GET /assets/maplibre-gl-worker.mjs?v=6.15.0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55434 - "GET /v1/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53474 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55668 - "POST /v1/predict HTTP/1.1" 200 OK

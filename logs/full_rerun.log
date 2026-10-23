@@ -1,0 +1,44 @@
+2024-01 days 08-14: 7 files
+  points after type filter: 31,478,044 (9,514 vessels)
+2024-01: 27,092 samples, 2,594 voyages, 1,450 vessels, 160 arrival ports
+2024-04 days 08-14: 7 files
+  points after type filter: 35,931,860 (10,742 vessels)
+2024-04: 35,370 samples, 3,105 voyages, 1,627 vessels, 179 arrival ports
+2024-07 days 08-14: 7 files
+  points after type filter: 40,635,894 (11,869 vessels)
+2024-07: 37,580 samples, 3,305 voyages, 1,761 vessels, 216 arrival ports
+  fetching weather for 608 cells (2024-01)
+2024-01: weather_ok=1.000
+  fetching weather for 761 cells (2024-04)
+2024-04: weather_ok=1.000
+  fetching weather for 961 cells (2024-07)
+2024-07: weather_ok=1.000
+/home/devansh/voyance/pipeline/train.py:119: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.
+  type_speed = train.groupby("vessel_type_group")["sog"].median().clip(2, 25)
+/home/devansh/voyance/.venv/lib/python3.12/site-packages/xgboost/core.py:569: UserWarning: [03:03:45] WARNING: /__w/xgboost/xgboost/src/common/error_msg.cc:62: Falling back to prediction using DMatrix due to mismatched devices. This might lead to higher memory usage and slower performance. XGBoost is running on: cuda:0, while the input data is on: cpu.
+Potential solutions:
+- Use a data structure that matches the device ordinal in the booster.
+- Set the device for booster before call to inplace_predict.
+
+This warning will only be shown once.
+
+  return func(**kwargs)
+/home/devansh/voyance/pipeline/train.py:73: FutureWarning: The default of observed=False is deprecated and will be changed to True in a future version of pandas. Pass observed=False to retain current behavior or observed=True to adopt the future default and silence this warning.
+  med = df.groupby("vessel_type_group")["speed_kn"].median()
+model rows: train 18,040 test 12,924
+p10: best iter 1155
+p50: best iter 188
+p90: best iter 1999
+CQR adjustment: +6.12 h on each side (holdout n=3263)
+XGB-GPU p50 MAE: 6.590404510498047 h | LGBM-CPU: 7.740777982282241 h | baseline: 7.417956829071045 h
+P10-P90 coverage: 0.8385174868461777
+/home/devansh/voyance/pipeline/drift.py:41: FutureWarning: The behavior of DataFrame concatenation with empty or all-NA entries is deprecated. In a future version, this will no longer exclude empty or all-NA columns when determining the result dtypes. To retain the old behavior, exclude the relevant entries before the concat operation.
+  preds = pd.concat([
+  2024-04: n=10,176 mae=6.10 drifted=0 alert=False
+  2024-07: n=12,924 mae=6.59 drifted=0 alert=False
+drift summary written
+stats.json: 9004 voyages
+map.json: 177 showcase voyages
+voyages.json (API): 1200
+copied eval.json -> eval.json
+copied drift_summary.json -> drift.json

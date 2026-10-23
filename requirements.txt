@@ -1,0 +1,15 @@
+lightgbm>=4.5
+pyarrow>=18
+pandas>=2.2
+numpy>=1.26
+scipy>=1.13
+scikit-learn>=1.5
+shapely>=2.0
+requests>=2.32
+orjson>=3.10
+duckdb>=1.1
+evidently>=0.7
+xgboost>=3.0
+fastapi>=0.115
+uvicorn[standard]>=0.32
+prometheus-fastapi-instrumentator>=7.0

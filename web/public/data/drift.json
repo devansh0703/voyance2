@@ -1,0 +1,51 @@
+{
+  "baseline": "2024-01 (feature distribution reference)",
+  "monitor": [
+    "2024-04",
+    "2024-07"
+  ],
+  "reference_mae_h": 4.4874067306518555,
+  "weeks": [
+    {
+      "slice": "2024-04",
+      "n": 6868,
+      "mae_h": 5.98,
+      "mae_ratio_vs_test_overall": 1.33,
+      "drifted_features": [],
+      "psi_own": {
+        "remaining_distance_nm": 0.228,
+        "sog": 0.05,
+        "sog_median_6h": 0.055,
+        "wind_speed_10m": 0.084,
+        "wind_gusts_10m": 0.14,
+        "precipitation": 0.007,
+        "wave_height": 0.115,
+        "wave_period": 0.073,
+        "temperature_2m": 1.794,
+        "relative_humidity_2m": 0.152
+      },
+      "alert": true
+    },
+    {
+      "slice": "2024-07",
+      "n": 8227,
+      "mae_h": 4.49,
+      "mae_ratio_vs_test_overall": null,
+      "drifted_features": [],
+      "psi_own": {
+        "remaining_distance_nm": 0.254,
+        "sog": 0.054,
+        "sog_median_6h": 0.054,
+        "wind_speed_10m": 0.826,
+        "wind_gusts_10m": 1.115,
+        "precipitation": 0.041,
+        "wave_height": 0.847,
+        "wave_period": 0.462,
+        "temperature_2m": 6.198,
+        "relative_humidity_2m": 0.786
+      },
+      "alert": false
+    }
+  ],
+  "n_drifted_features_total": 0
+}

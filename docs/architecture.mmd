@@ -1,0 +1,45 @@
+flowchart LR
+  subgraph SOURCES["Open Data Sources"]
+    AIS["NOAA MarineCadastre<br/>AIS broadcast points<br/>(GeoParquet, CC0)"]
+    TRK["NOAA MarineCadastre<br/>monthly vessel tracks<br/>(GeoParquet, CC0)"]
+    W["Open-Meteo<br/>ERA5 atmosphere + marine<br/>(CC BY 4.0)"]
+    P["UN/LOCODE<br/>port gazetteer<br/>(open)"]
+  end
+
+  subgraph PIPE["Voyance Pipeline (Python)"]
+    VB["build_voyages.py<br/>port-buffer voyage segmentation<br/>sample extraction"]
+    WX["weather.py<br/>0.5° cell grid join<br/>hourly ERA5 + waves"]
+    TR["train.py<br/>LightGBM quantiles P10/P50/P90<br/>+ speed model + baselines"]
+    DR["drift.py<br/>Evidently weekly slices<br/>PSI / KS + MAE alerts"]
+  end
+
+  subgraph ART["Artifacts"]
+    FS["feature store<br/>(Parquet)"]
+    M["models/<br/>eta-p10/p50/p90, speed"]
+    E["reports/eval.json<br/>real MAE by weather, region, type"]
+    D["reports/drift/<br/>HTML + drift_summary.json"]
+  end
+
+  subgraph SERVE["Serving"]
+    API["FastAPI<br/>/v1/predict · /v1/metrics<br/>/v1/drift · /v1/voyages"]
+    WEB["Vite + React 19<br/>landing · dashboards<br/>MapLibre · globe.gl · ECharts<br/>research section"]
+  end
+
+  USERS["Fleet ops +<br/>maritime AI teams"] --> WEB
+  WEB --> API
+  API --> M
+  API --> E
+  API --> D
+
+  AIS --> VB
+  P --> VB
+  VB --> FS
+  W --> WX
+  FS --> WX
+  WX --> TR
+  TR --> M
+  TR --> E
+  FS --> DR
+  TR --> DR
+  DR --> D
+  TRK --> WEB

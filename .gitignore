@@ -1,0 +1,10 @@
+data/raw/*
+data/interim/weather/
+*.aria2
+.venv/
+__pycache__/
+node_modules/
+dist/
+web/dist/
+*.pyc
+.DS_Store

@@ -1,0 +1,20 @@
+Resolved 24 packages in 459ms
+Downloading rapidfuzz (3.0MiB)
+Downloading hdbscan (5.6MiB)
+ Downloaded rapidfuzz
+ Downloaded hdbscan
+Prepared 3 packages in 2.85s
+Installed 13 packages in 22ms
+ + contourpy==1.4.0
+ + cycler==0.12.1
+ + filterpy==1.4.5
+ + fonttools==4.67.0
+ + h3==4.5.0
+ + hdbscan==0.8.44
+ + hmmlearn==0.3.3
+ + kiwisolver==1.5.1
+ + matplotlib==3.11.2
+ + networkx==3.7
+ + pillow==13.0.0
+ + pyparsing==3.3.3
+ + rapidfuzz==3.14.6

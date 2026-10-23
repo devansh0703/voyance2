@@ -1,0 +1,54 @@
+{
+  "months": [
+    {
+      "month": "2024-01",
+      "voyages": 1805,
+      "samples": 14509,
+      "vessels": 1180
+    },
+    {
+      "month": "2024-04",
+      "voyages": 2968,
+      "samples": 30631,
+      "vessels": 1543
+    },
+    {
+      "month": "2024-07",
+      "voyages": 3247,
+      "samples": 31551,
+      "vessels": 1717
+    }
+  ],
+  "by_region": {
+    "gulf_of_mexico": 37294,
+    "us_east_coast": 13512,
+    "other_us_waters": 11097,
+    "us_west_coast": 7156,
+    "great_lakes": 5922,
+    "puerto_rico_caribbean": 909,
+    "hawaii_pacific": 801
+  },
+  "by_type": {
+    "tug_pilot": 54301,
+    "cargo": 13924,
+    "fishing": 3797,
+    "tanker": 2787,
+    "passenger": 1882
+  },
+  "by_beaufort": {
+    "0": 936,
+    "1": 10171,
+    "2": 22033,
+    "3": 18037,
+    "4": 17476,
+    "5": 5740,
+    "6": 1803,
+    "7": 408,
+    "8": 77,
+    "9": 8,
+    "10": 2
+  },
+  "weather_ok_fraction": 1.0,
+  "total_voyages": 8020,
+  "total_samples": 76691
+}
