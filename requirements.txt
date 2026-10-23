@@ -13,3 +13,12 @@ xgboost>=3.0
 fastapi>=0.115
 uvicorn[standard]>=0.32
 prometheus-fastapi-instrumentator>=7.0
+filterpy
+rapidfuzz
+hdbscan
+h3
+hmmlearn
+networkx
+haversine
+pyproj
+pytest
