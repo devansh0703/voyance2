@@ -69,3 +69,12 @@ INFO:     127.0.0.1:60162 - "GET /v2/usage HTTP/1.1" 200 OK
 INFO:     127.0.0.1:60158 - "GET /v1/metrics HTTP/1.1" 200 OK
 INFO:     127.0.0.1:60144 - "GET /v2/usage HTTP/1.1" 200 OK
 INFO:     127.0.0.1:60154 - "GET /v2/live/datasets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45776 - "GET /v2/usage HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55648 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55648 - "GET /assets/index-Bd-bbIFt.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55660 - "GET /assets/index-DUJmKWLA.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55660 - "GET /data/stats.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55648 - "GET /v1/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55648 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55648 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55648 - "GET /v1/metrics HTTP/1.1" 200 OK
