@@ -77,7 +77,7 @@ function DepthProfile() {
   return (
     <div className="panel">
       <div className="flex items-center justify-between px-4 py-2.5 hairline-b">
-        <span className="microtype">bathymetric depth profile · EMODnet DTM via OpenTopoData (European waters)</span>
+        <span className="microtype">bathymetric depth profile · ETOPO1 via OpenTopoData (global coverage)</span>
         <select className="btn" value={voy} onChange={(e) => setVoy(e.target.value)}>
           {list.map((v) => <option key={v} value={v}>{v.slice(0, 22)}</option>)}
         </select>
@@ -448,6 +448,62 @@ function ContourSlice() {
   )
 }
 
+
+/* ── DBSCAN temporal density clusters ── */
+function DBSCANPanel() {
+  const [d, setD] = useState<any>(null)
+  useEffect(() => { fetch(API + '/v2/analytics/dbscan-temporal').then((r) => r.json()).then(setD) }, [])
+  return (
+    <div className="panel p-4">
+      <div className="flex items-center justify-between" style={{ borderBottom: '1px solid var(--color-rule)', paddingBottom: 8 }}>
+        <span className="microtype">DBSCAN temporal density clusters · time-scaled eps</span>
+        <span className="chip">{d?.clusters?.length ?? '…'} clusters · noise {d?.noise ?? '…'}</span>
+      </div>
+      <table className="dense mt-2">
+        <thead><tr><th>CLUSTER</th><th>POINTS</th><th>LAT</th><th>LNG</th><th>SPAN h</th></tr></thead>
+        <tbody>
+          {(d?.clusters ?? []).slice(0, 8).map((c: any) => (
+            <tr key={c.cluster}><td>#{c.cluster}</td><td>{c.n}</td><td>{c.lat}</td><td>{c.lng}</td><td>{c.span_h}</td></tr>
+          ))}
+          {!d && <tr><td colSpan={5} className="text-dim">clustering…</td></tr>}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+/* ── dynamic buffer vs protected polygons ── */
+function BufferIntersect() {
+  const [inp, setInp] = useState({ lat: 60.1, lon: 24.9, sog: 12, minutes: 30 })
+  const [r, setR] = useState<any>(null)
+  useEffect(() => {
+    fetch(`${API}/v2/analytics/buffer-intersect?lat=${inp.lat}&lon=${inp.lon}&sog_kn=${inp.sog}&minutes=${inp.minutes}`)
+      .then((x) => x.json()).then(setR)
+  }, [inp])
+  return (
+    <div className="panel p-4">
+      <div className="microtype" style={{ borderBottom: '1px solid var(--color-rule)', paddingBottom: 8 }}>
+        dynamic buffer intersect · predicted position buffer × protected polygons (Shapely)
+      </div>
+      <div className="mt-2 grid grid-cols-4 gap-2">
+        {(['lat', 'lon', 'sog', 'minutes'] as const).map((k) => (
+          <label key={k} className="mono text-[11px] text-dim">
+            {k}
+            <input type="number" className="ml-1 w-16 bg-transparent text-paper outline-none border border-rule px-1"
+              value={(inp as any)[k]} onChange={(e) => setInp({ ...inp, [k]: +e.target.value })} />
+          </label>
+        ))}
+      </div>
+      <div className="mt-2 mono text-xs">
+        {r ? (r.hits?.length
+              ? <span className="chip chip-bad">{r.hits.length} protected area(s) intersect the {r.buffer_radius_deg}° buffer</span>
+              : <span className="chip chip-ok">no protected-area intersection · {r.mpas_scanned} polygons scanned</span>)
+             : 'scanning…'}
+      </div>
+    </div>
+  )
+}
+
 export default function Analytics() {
   const [res, setRes] = useState(4)
   const [hexes, setHexes] = useState<any[]>([])
@@ -492,6 +548,11 @@ export default function Analytics() {
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
         <WaveField />
         <ContourSlice />
+      </div>
+
+      <div className="mt-4 grid gap-4 xl:grid-cols-2">
+        <DBSCANPanel />
+        <BufferIntersect />
       </div>
 
       <div className="mt-4">

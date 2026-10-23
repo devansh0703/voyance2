@@ -151,14 +151,23 @@ def overlay_quakes():
 
 
 @router.get("/live/overlays/mpas")
-def overlay_mpas():
-    return {"source": "Marine Regions WFS (CC BY 4.0)", "mpas": sources.marine_regions_mpas()}
+def overlay_mpas(south: float = 58.0, west: float = 14.0, north: float = 66.0, east: float = 31.0):
+    fc = sources.marine_regions_mpas(south, west, north, east)
+    return {"source": "Marine Regions WFS (CC BY 4.0)", "count": len(fc.get("features", [])),
+            "feature_collection": fc}
 
 
 @router.get("/live/overlays/biodiversity")
 def overlay_bio(lat: float, lon: float):
     return {"obis": sources.obis_occurrences(lat, lon), "gbif": sources.gbif_occurrences(lat, lon),
             "attribution": "OBIS · GBIF (open occurrence data)"}
+
+
+@router.get("/live/sar")
+def live_sar(lat: float = 60.1, lon: float = 24.9):
+    return {"source": "Sentinel-1 GRD via Copernicus Data Space OData catalog "
+                      "(metadata keyless; imagery needs free CDSE registration)",
+            "granules": sources2.sar_granules(lat, lon)}
 
 
 @router.get("/live/bathymetry")
@@ -218,7 +227,9 @@ def analytics_route(src: int, dst: int, algorithm: str = "astar"):
         r = analytics.shortest_route(G, src, dst, algorithm)
     except Exception as e:  # noqa: BLE001
         raise HTTPException(400, str(e))
-    return {"algorithm": algorithm, **r,
+    coords = [[round(float(G.nodes[n]["lat"]), 4), round(float(G.nodes[n]["lon"]), 4)]
+              for n in r["path"] if n in G.nodes]
+    return {"algorithm": algorithm, **r, "path_coords": coords,
             "model": "Dijkstra/A* on great-circle maritime graph (networkx)"}
 
 
@@ -419,6 +430,99 @@ def analytics_dwt_fit():
             **fit}
 
 
+@router.get("/analytics/dbscan-temporal")
+def analytics_dbscan_temporal(eps_min: float = 240.0, min_samples: int = 10):
+    df = _hist()
+    if df is None:
+        raise HTTPException(503, "historical samples missing")
+    slow = df[df["sog"] < 1.0]
+    ts = pd.to_datetime(slow["ts"], utc=True).astype("int64").to_numpy() // 10**6  # ms
+    r = algo2.dbscan_temporal(slow["lat"].to_numpy(), slow["lon"].to_numpy(), ts,
+                              eps_min=eps_min, min_samples=min_samples)
+    return {"model": "DBSCAN temporal density clustering (sklearn) — time-scaled eps",
+            **r}
+
+
+@router.get("/analytics/buffer-intersect")
+def analytics_buffer_intersect(lat: float, lon: float, sog_kn: float = 12.0,
+                               minutes: float = 30.0):
+    """Dynamic sog-scaled buffer around a predicted position intersected with
+    MPA polygons (Shapely polygon intersection queries)."""
+    from shapely.geometry import shape
+    fc = sources.marine_regions_mpas(lat - 5, lon - 5, lat + 5, lon + 10)
+    polys = []
+    for f in fc.get("features", []):
+        try:
+            polys.append({"name": (f.get("properties") or {}).get("name"),
+                          "geom": shape(f.get("geometry"))})
+        except Exception:  # noqa: BLE001
+            continue
+    radius_deg = (sog_kn * minutes / 60.0) / 60.0
+    hits = []
+    for p in polys:
+        buf = shape({"type": "Polygon",
+                     "coordinates": [[(lon + radius_deg * math.cos(math.radians(a)),
+                                       lat + radius_deg * math.sin(math.radians(a)))
+                                      for a in range(0, 361, 20)]]})
+        if buf.intersects(p["geom"]):
+            hits.append({"name": p["name"], "buffer_radius_deg": round(radius_deg, 3)})
+    return {"model": "dynamic spatial buffer intersecting + Shapely polygon intersection",
+            "buffer_radius_deg": round(radius_deg, 3), "mpas_scanned": len(polys),
+            "hits": hits}
+
+
+@router.get("/analytics/bilinear-depth")
+def analytics_bilinear_depth(lat: float, lon: float):
+    """True bilinear interpolation over a fetched EMODnet depth grid (3×3 cells)."""
+    la0, lo0 = math.floor(lat), math.floor(lon)
+    glats = [la0 - 1 + i for i in range(3)]
+    glons = [lo0 - 1 + i for i in range(3)]
+    lats, lons = [], []
+    for a in glats:
+        for b in glons:
+            lats.append(a + 0.5)
+            lons.append(b + 0.5)
+    depths = sources.bathy_depths(lats, lons)
+    V = [depths[i * 3:(i + 1) * 3] for i in range(3)]
+    if any(v is None for row in V for v in row):
+        return {"available": False, "reason": "OpenTopoData cell(s) missing"}
+    v = algo2.bilinear_interp_grid([lat], [lon], glats, glons, V)[0]
+    return {"available": True, "model": "bilinear interpolation over 3×3 ETOPO1 grid",
+            "grid_lats": glats, "grid_lons": glons, "grid_depths": V,
+            "bilinear_depth_m": round(float(v), 2)}
+
+
+import math  # noqa: E402
+
+
+@router.get("/analytics/darkvessels")
+def analytics_darkvessels(limit: int = 40):
+    """Dark-vessel candidates: last-known positions before AIS drop-outs."""
+    df = _hist()
+    if df is None:
+        raise HTTPException(503, "historical samples missing")
+    markers = []
+    for vid, g in list(df.groupby("voyage_id"))[: limit * 3]:
+        gg = g.sort_values("ts")
+        ts = (pd.to_datetime(gg["ts"], utc=True).astype("int64") // 10**6).to_numpy()  # ns→ms
+        gaps = algo2.gap_analysis(ts, gap_threshold_min=45.0)
+        for gap in gaps["gaps"]:
+            after = gg[g["ts"] > pd.Timestamp(gap["to_ts"], tz="UTC")]
+            if after.empty:
+                continue
+            row = after.iloc[0]
+            markers.append({"voyage_id": vid, "lat": float(row["lat"]), "lon": float(row["lon"]),
+                            "gap_min": gap["gap_min"], "sog": float(row["sog"] or 0),
+                            "type": str(row["vessel_type_group"])})
+            if len(markers) >= limit:
+                break
+        if len(markers) >= limit:
+            break
+    markers.sort(key=lambda m: -m["gap_min"])
+    return {"model": "dark-vessel candidates = first position after AIS drop-out ≥ 45 min",
+            "markers": markers}
+
+
 @router.get("/analytics/replay/{voyage_id}")
 def analytics_replay(voyage_id: str):
     """Historical track replay bundle: coords, SOG series, gaps, FSM states, fuel series."""
@@ -439,7 +543,7 @@ def analytics_replay(voyage_id: str):
     if s.empty:
         raise HTTPException(404, "voyage not found")
     sog = s["sog"].fillna(0).tolist()
-    ts = pd.to_datetime(s["ts"], utc=True).astype("int64").tolist()
+    ts = (pd.to_datetime(s["ts"], utc=True).astype("int64") // 10**6).tolist()  # ns→ms
     gaps = algo2.gap_analysis(ts)
     smoothed = algo2.bidirectional_smooth(sog)
     fuel_pts = []

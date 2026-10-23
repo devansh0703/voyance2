@@ -212,11 +212,16 @@ def bathy_depths(lats: list[float], lons: list[float]) -> list[float | None]:
     """Depth (m, positive down) per point. OpenTopoData free tier: 100 locs/call, 1 req/s."""
     if not lats:
         return []
+    return etopo1_depths(lats, lons)
+
+
+def etopo1_depths(lats: list[float], lons: list[float]) -> list[float | None]:
+    """Global ETOPO1 depths via OpenTopoData (100 locs/call, 1 req/s). No coverage holes."""
     out: list[float | None] = []
     for i in range(0, len(lats), 100):
         chunk = [f"{a:.5f},{b:.5f}" for a, b in zip(lats[i:i + 100], lons[i:i + 100])]
         try:
-            r = _get("https://api.opentopodata.org/v1/emod2018",
+            r = _get("https://api.opentopodata.org/v1/etopo1",
                      params={"locations": "|".join(chunk)}, timeout=40)
             for res in r.json().get("results", []):
                 z = res.get("elevation")
@@ -230,19 +235,33 @@ def bathy_depths(lats: list[float], lons: list[float]) -> list[float | None]:
 
 # ---------- Marine Regions MPAs (keyless WFS) ----------
 
-def marine_regions_mpas(limit: int = 60) -> list[dict]:
+def marine_regions_eez(south: float = 58.0, west: float = 14.0,
+                       north: float = 66.0, east: float = 31.0,
+                       limit: int = 20) -> dict:
+    """Exclusive Economic Zone jurisdiction polygons — Marine Regions WFS (CC BY 4.0)."""
     def fetch():
         try:
             r = _get("https://geo.vliz.be/geoserver/MarineRegions/ows",
                      params={"service": "WFS", "version": "1.1.0", "request": "GetFeature",
-                             "typeName": "MarineRegions:eez_mpa", "outputFormat": "application/json",
+                             "typeName": "MarineRegions:eez", "outputFormat": "application/json",
+                             "bbox": f"{west},{south},{east},{north},urn:ogc:def:crs:EPSG::4326",
                              "count": limit, "srsName": "urn:ogc:def:crs:EPSG::4326"},
-                     timeout=30)
+                     timeout=60)
             feats = r.json().get("features", [])
-            return [{"name": f["properties"].get("name") or f["properties"].get("wdpaid"),
-                     "wdpaid": f["properties"].get("wdpaid")}
-                    for f in feats][:limit]
+            for f in feats:
+                props = f.get("properties") or {}
+                props["name"] = props.get("geonameid") and props.get("mrgid") and props.get("name") or props.get("mrgid")
+            return {"type": "FeatureCollection", "features": feats[:limit]}
         except requests.RequestException:
-            return []
+            return {"type": "FeatureCollection", "features": []}
 
-    return cached("mpas", 86400, fetch)
+    return cached(f"eez-{south:.0f}-{west:.0f}-{north:.0f}-{east:.0f}", 86400, fetch)
+
+
+def marine_regions_mpas(south: float = 58.0, west: float = 14.0,
+                        north: float = 66.0, east: float = 31.0,
+                        limit: int = 30) -> dict:
+    """Protected-area polygons via OSM Overpass (keyless; Marine Regions WFS has no
+    eez_mpa layer — documented in sources2.overpass_protected_areas)."""
+    from . import sources2
+    return sources2.overpass_protected_areas(south, west, north, east, limit)

@@ -27,6 +27,7 @@ function LiveMap({ vessels, overlays, inspect, setInspect, setInspectData }: {
 }) {
   const el = useRef<HTMLDivElement>(null)
   const mapRef = useRef<maplibregl.Map | null>(null)
+  const radarTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
@@ -74,9 +75,19 @@ function LiveMap({ vessels, overlays, inspect, setInspect, setInspectData }: {
     }
     if (overlays.mpas) {
       j('/v2/live/overlays/mpas').then((d: any) => {
-        if (!d?.mpas?.length || !mapRef.current) return
-        mapRef.current.setPaintProperty('gebco', 'raster-opacity', 0.6)
+        const fc = d?.feature_collection
+        if (!fc?.features?.length || !mapRef.current) return
+        if (mapRef.current.getSource('mpas')) (mapRef.current.getSource('mpas') as any).setData(fc)
+        else {
+          mapRef.current.addSource('mpas', { type: 'geojson', data: fc })
+          mapRef.current.addLayer({ id: 'mpa-f', type: 'fill', source: 'mpas',
+            paint: { 'fill-color': '#157a4a', 'fill-opacity': 0.18 } })
+          mapRef.current.addLayer({ id: 'mpa-l', type: 'line', source: 'mpas',
+            paint: { 'line-color': '#157a4a', 'line-width': 1.5 } })
+        }
       })
+    } else if (mapRef.current?.getLayer('mpa-f')) {
+      mapRef.current.removeLayer('mpa-f'); mapRef.current.removeLayer('mpa-l')
     }
     if (overlays.harbors) {
       j('/v2/live/harbors').then((d: any) => {
@@ -95,13 +106,39 @@ function LiveMap({ vessels, overlays, inspect, setInspect, setInspectData }: {
     if (overlays.radar) {
       j('/v2/live/radar').then((d: any) => {
         if (!d?.frames?.length || !mapRef.current) return
-        const last = d.frames[d.frames.length - 1]
-        if (!mapRef.current.getSource('radar')) {
-          mapRef.current.addSource('radar', { type: 'raster',
-            tiles: [`${d.host}${last.path}/512/{z}/{x}/{y}/4/1_1.png`], tileSize: 256 })
-          mapRef.current.addLayer({ id: 'radar-r', type: 'raster', source: 'radar', paint: { 'raster-opacity': 0.55 } })
+        const map = mapRef.current
+        if (!map.getSource('radar')) {
+          d.frames.forEach((f: any, i: number) => {
+            map.addSource(`radar-${i}`, { type: 'raster',
+              tiles: [`${d.host}${f.path}/512/{z}/{x}/{y}/4/1_1.png`], tileSize: 256 })
+            map.addLayer({ id: `radar-${i}`, type: 'raster', source: `radar-${i}`,
+              paint: { 'raster-opacity': i === 0 ? 0.55 : 0, 'raster-fade-duration': 0 } })
+          })
+          let fi = 0
+          radarTimerRef.current = setInterval(() => {
+            const mapNow = mapRef.current
+            if (!mapNow) return
+            fi = (fi + 1) % d.frames.length
+            d.frames.forEach((_: any, i: number) => {
+              if (mapNow.getLayer(`radar-${i}`))
+                mapNow.setPaintProperty(`radar-${i}`, 'raster-opacity', i === fi ? 0.55 : 0)
+            })
+          }, 800)
         }
       })
+    } else {
+      if (radarTimerRef.current) clearInterval(radarTimerRef.current)
+      const map = mapRef.current
+      if (map?.getLayer('radar-0')) {
+        Object.keys(map.getStyle().sources ?? {}).filter((k) => k.startsWith('radar-'))
+          .forEach((k) => {
+            try { map.removeLayer(k.replace('radar-', 'radar-')) } catch { /* layer absent */ }
+          })
+        ;(map.getStyle().layers ?? []).filter((l: any) => l.id.startsWith('radar-'))
+          .forEach((l: any) => { try { map.removeLayer(l.id) } catch { /* absent */ } })
+        Object.keys(map.getStyle().sources ?? {}).filter((k) => k.startsWith('radar-'))
+          .forEach((k) => { try { map.removeSource(k) } catch { /* absent */ } })
+      }
     }
   }, [overlays, ready])
 
@@ -109,13 +146,13 @@ function LiveMap({ vessels, overlays, inspect, setInspect, setInspectData }: {
   useEffect(() => {
     if (!inspect) return
     Promise.all([
-      j(`/v2/live/bathymetry?lat=${inspect.lat}&lon=${inspect.lon}`),
+      fetch(`/v2/analytics/bilinear-depth?lat=${inspect.lat}&lon=${inspect.lon}`).then((r) => r.json()).catch(() => null),
       j(`/v2/live/weather?lat=${inspect.lat}&lon=${inspect.lon}`),
       j(`/v2/live/overlays/quakes`),
     ]).then(([b, w, q]: any[]) => {
       const near = (q?.features ?? []).filter((f: any) =>
         Math.abs(f.lat - inspect.lat) < 3 && Math.abs(f.lon - inspect.lon) < 3).length
-      setInspectData({ depth_m: b?.profile?.[1]?.depth_m ?? null, weather: w?.open_meteo_current, quakes: near })
+      setInspectData({ depth_m: b?.bilinear_depth_m ?? null, bilinear: b?.available === true, weather: w?.open_meteo_current, quakes: near })
     })
   }, [inspect])
 
@@ -363,7 +400,7 @@ export default function Live() {
           <div className="microtype hairline-b pb-2">point-and-click coordinate inspection</div>
           <div className="mono mt-2 text-xs">
             {inspect.lat.toFixed(4)} N, {inspect.lon.toFixed(4)} E ·
-            {' '}{inspectData?.depth_m != null ? `EMODnet depth ${inspectData.depth_m.toFixed(0)} m` : 'depth…'} ·
+            {' '}{inspectData?.depth_m != null ? `ETOPO1 depth (bilinear) ${inspectData.depth_m.toFixed(0)} m` : 'depth…'} ·
             {' '}{inspectData?.weather?.wind_speed_10m != null ? `wind ${inspectData.weather.wind_speed_10m} kn` : 'wind…'} ·
             {' '}{inspectData?.quakes != null ? `${inspectData.quakes} quakes (24h, 3°)` : ''}
           </div>
@@ -407,8 +444,33 @@ export default function Live() {
       <div className="mt-4">
         <EncounterView pairs={collisionPairs} vessels={vessels} />
       </div>
+      <div className="mt-4">
+        <SARChips />
+      </div>
       <Footer />
     </main>
+  )
+}
+
+
+function SARChips() {
+  const [d, setD] = useState<any>(null)
+  useEffect(() => { fetch(API + '/v2/live/sar?lat=60.1&lon=24.9').then((r) => r.json()).then(setD) }, [])
+  return (
+    <div className="panel p-4">
+      <div className="microtype" style={{ borderBottom: '1px solid var(--color-rule)', paddingBottom: 8 }}>
+        SAR imagery chips · Sentinel-1 GRD over Gulf of Finland (CDSE catalog metadata, keyless)
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {(d?.granules ?? []).map((g: any) => (
+          <a key={g.id} href={g.browser} target="_blank" rel="noreferrer"
+             className="chip chip-acc" title={`${g.date} · ${g.size_mb} MB`}>
+            {g.name.slice(0, 34)}
+          </a>
+        ))}
+        {d && !d.granules.length && <span className="mono text-xs text-dim">no SAR granules in the last 4 days over this cell</span>}
+      </div>
+    </div>
   )
 }
 

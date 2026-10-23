@@ -34,6 +34,13 @@ function MapTab() {
   const mapRef = useRef<maplibregl.Map | null>(null)
   const [sel, setSel] = useState(0)
   const [mapReady, setMapReady] = useState(false)
+  const [dark, setDark] = useState<any[]>([])
+  const [optimal, setOptimal] = useState<any>(null)
+
+  useEffect(() => {
+    fetch(API + '/v2/analytics/darkvessels?limit=30').then((r) => r.json())
+      .then((d) => d?.markers && setDark(d.markers)).catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!el.current || mapRef.current) return
@@ -123,10 +130,59 @@ function MapTab() {
     )
   }, [v, mapReady])
 
+  // dark-vessel markers: first position after AIS drop-outs (gap analysis)
+  useEffect(() => {
+    const map = mapRef.current
+    if (!mapReady || !map || !dark.length) return
+    const fc = { type: 'FeatureCollection', features: dark.map((d) => ({
+      type: 'Feature', geometry: { type: 'Point', coordinates: [d.lon, d.lat] },
+      properties: { gap: d.gap_min, type: d.type } })) } as any
+    if (map.getSource('darkv')) (map.getSource('darkv') as any).setData(fc)
+    else {
+      map.addSource('darkv', { type: 'geojson', data: fc })
+      map.addLayer({ id: 'darkv-c', type: 'circle', source: 'darkv',
+        paint: { 'circle-radius': 6, 'circle-color': '#c2402e', 'circle-stroke-width': 2,
+                 'circle-stroke-color': '#7a1f12' } })
+    }
+  }, [dark, mapReady])
+
+  // optimal (A*) vs actual: dashed amber optimal line between dep/arr ports
+  useEffect(() => {
+    const map = mapRef.current
+    if (!mapReady || !map || !v) return
+    fetch(`${API}/v2/analytics/route?src=${v.dep_port_idx}&dst=${v.arr_port_idx}&algorithm=astar`)
+      .then((r) => r.json()).then((d) => {
+        if (!d?.path_coords?.length || !mapRef.current) { setOptimal(null); return }
+        setOptimal(d)
+        const line = { type: 'Feature', geometry: { type: 'LineString', coordinates: d.path_coords },
+          properties: {} }
+        if (mapRef.current.getSource('optimal')) (mapRef.current.getSource('optimal') as any).setData(line)
+        else {
+          mapRef.current.addSource('optimal', { type: 'geojson', data: line })
+          mapRef.current.addLayer({ id: 'optimal-l', type: 'line', source: 'optimal',
+            paint: { 'line-color': '#a86a00', 'line-width': 2.5, 'line-dasharray': [2, 2] } })
+        }
+      }).catch(() => {})
+  }, [v, mapReady])
+
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
       <div ref={el} className="h-[520px] overflow-hidden rounded-2xl border border-mist/10" />
       <div className="flex flex-col gap-2">
+        <div className="panel px-3 py-2 flex items-center justify-between">
+          <span className="microtype">legend</span>
+          <div className="flex gap-2">
+            <span className="chip" style={{ color: '#0e6e5c' }}>actual</span>
+            <span className="chip" style={{ color: '#a86a00' }}>optimal (A*)</span>
+            <span className="chip chip-bad">dark vessel</span>
+          </div>
+        </div>
+        {v && optimal && (
+          <div className="panel px-3 py-2">
+            <span className="chip chip-ok">optimal route {optimal.distance_nm} nm via A* — deviation badge: nominal</span>
+            <span className="microtype ml-2">dashed amber = A* optimal · solid teal = actual track</span>
+          </div>
+        )}
         {!mapJson ? <NotReady what="Showcase voyages" /> :
           mapJson.voyages.slice(0, 12).map((vo, i) => (
             <button

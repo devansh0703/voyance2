@@ -89,6 +89,8 @@ def export_map(frames: dict[str, pd.DataFrame], voy: dict[str, pd.DataFrame]):
                 "vessel_type_group": row["vessel_type_group"],
                 "dep_port": pn.get(int(row["dep_port_idx"]), f"port#{row['dep_port_idx']}"),
                 "arr_port": pn.get(int(row["arr_port_idx"]), f"port#{row['arr_port_idx']}"),
+                "dep_port_idx": int(row["dep_port_idx"]),
+                "arr_port_idx": int(row["arr_port_idx"]),
                 "duration_h": round(float(row["voyage_duration_h"]), 1),
                 "region": row.get("region", ""),
                 "coords": coords,

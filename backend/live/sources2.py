@@ -44,32 +44,54 @@ def dma_ais_vessels(limit: int = 200) -> list[dict]:
 
 # ---------- Argo floats (keyless ERDDAP) ----------
 
-def argo_floats(limit: int = 120) -> list[dict]:
-    def fetch():
-        for base in ("https://coastwatch.pfeg.noaa.gov/erddap",
-                     "https://erddap.ifremer.fr/erddap"):
-            try:
-                r = _get(f"{base}/tabledap/ArgoFloats.json",
-                         params={"latitude": ">=-90", "longitude": ">=-180",
-                                 "&orderByMax": '"time"', "time": ">=2024-01-01"},
-                         timeout=40)
-                rows = r.json().get("table", {}).get("rows", [])
-                cols = r.json().get("table", {}).get("columnNames", [])
-                if not rows:
-                    continue
-                idx = {c: i for i, c in enumerate(cols)}
-                out = []
-                for row in rows[:limit]:
-                    out.append({"platform": row[idx.get("platform_number", 0)],
-                                "lat": row.get(idx.get("latitude", 1)),
-                                "lon": row.get(idx.get("longitude", 2)),
-                                "cycle": row.get(idx.get("cycle_number", 3))})
-                return out
-            except requests.RequestException:
-                continue
-        return []
+def argo_floats(limit: int = 150) -> list[dict]:
+    """Recent Argo float profile records — IFREMER GDAC via ERDDAP (verified non-empty)."""
 
-    return cached("argo", 86400, fetch)
+    def fetch():
+        try:
+            # date is the index table's time column (no 'time' variable here)
+            r = _get("https://erddap.ifremer.fr/erddap/tabledap/ArgoFloats-index.json"
+                     "?file,date,latitude,longitude&date>=2026-09-01&distinct()",
+                     timeout=60)
+            tbl = r.json().get("table", {})
+            cols = tbl.get("columnNames", [])
+            i_lat, i_lon, i_file, i_date = (cols.index("latitude"), cols.index("longitude"),
+                                            cols.index("file"), cols.index("date"))
+            rows = tbl.get("rows", [])[:limit]
+            return [{"file": row[i_file], "lat": row[i_lat], "lon": row[i_lon],
+                     "date": row[i_date]} for row in rows]
+        except requests.RequestException:
+            return []
+
+    return cached("argo", 3600, fetch)
+
+
+def sar_granules(lat: float, lon: float, days: int = 4, limit: int = 6) -> list[dict]:
+    """Sentinel-1 SAR GRD products over a point — Copernicus Data Space OData catalog
+    (metadata search is keyless; imagery download needs free registration)."""
+    import datetime as dt
+    start = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    poly = (f"geography'SRID=4326;POLYGON(({lon - 1} {lat - 1}, {lon + 1} {lat - 1}, "
+            f"{lon + 1} {lat + 1}, {lon - 1} {lat + 1}, {lon - 1} {lat - 1}))'")
+    flt = (f"Collection/Name eq 'SENTINEL-1' and contains(Name,'GRD') and "
+           f"OData.CSC.Intersects(area={poly}) and "
+           f"ContentDate/Start gt {start}")
+    def fetch():
+        try:
+            r = _get("https://catalogue.dataspace.copernicus.eu/odata/v1/Products",
+                     params={"$filter": flt, "$top": limit,
+                             "$orderby": "ContentDate/Start desc"}, timeout=40)
+            out = []
+            for v in r.json().get("value", []):
+                out.append({"name": v.get("Name"), "id": v.get("Id"),
+                            "date": (v.get("ContentDate") or {}).get("Start"),
+                            "size_mb": round((v.get("ContentLength") or 0) / 1e6, 1),
+                            "browser": f"https://catalogue.dataspace.copernicus.eu/details?product={v.get('Id')}"})
+            return out
+        except requests.RequestException:
+            return []
+
+    return cached(f"sar-{lat:.1f}-{lon:.1f}", 1800, fetch)
 
 
 # ---------- USGS Water Services (keyless instantaneous values) ----------
@@ -97,6 +119,43 @@ def usgs_water_stations(state: str = "fl", limit: int = 25) -> list[dict]:
 
 
 # ---------- OpenStreetMap Overpass (keyless) ----------
+
+def overpass_protected_areas(south: float, west: float, north: float, east: float,
+                             limit: int = 60) -> dict:
+    """Marine/terrestrial protected-area polygons from OSM (protect_class) with real
+    geometries — Overpass `out geom` (ODbL). Marine ones carry marine=yes."""
+
+    def fetch():
+        q = ('[out:json][timeout:60];('
+             f'way["protect_class"]({south},{west},{north},{east});'
+             f'relation["protect_class"]({south},{west},{north},{east}););'
+             f'out geom {limit};')
+        try:
+            r = requests.post("https://overpass-api.de/api/interpreter",
+                              data={"data": q}, headers=UA, timeout=90)
+            r.raise_for_status()
+            feats = []
+            for e in r.json().get("elements", [])[:limit]:
+                tags = e.get("tags") or {}
+                geom = e.get("geometry") or []
+                coords = [[g["lon"], g["lat"]] for g in geom]
+                if len(coords) < 3:
+                    continue
+                closed = coords[0] == coords[-1]
+                feats.append({
+                    "type": "Feature",
+                    "geometry": {"type": "Polygon" if closed else "LineString",
+                                 "coordinates": [coords] if closed else coords},
+                    "properties": {"name": tags.get("name") or "protected area",
+                                   "protect_class": tags.get("protect_class"),
+                                   "marine": tags.get("marine", "no")},
+                })
+            return {"type": "FeatureCollection", "features": feats}
+        except requests.RequestException:
+            return {"type": "FeatureCollection", "features": []}
+
+    return cached(f"prot-{south:.1f}-{west:.1f}-{north:.1f}-{east:.1f}", 86400, fetch)
+
 
 def overpass_harbors(south: float, west: float, north: float, east: float) -> list[dict]:
     def fetch():

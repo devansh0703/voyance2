@@ -88,9 +88,11 @@ export interface MapJson {
     vessel_type_group: string
     dep_port: string
     arr_port: string
+    dep_port_idx?: number
+    arr_port_idx?: number
     duration_h: number
     coords: [number, number][] // [lon, lat]
-    err_pct: number // |error|/remaining time at sample points (avg)
+    err_pct: number | null // |error|/remaining time where model predictions exist
   }[]
   lanes: [number, number, number][] // [lat, lng, weight]
 }
