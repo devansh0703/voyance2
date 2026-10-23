@@ -22,7 +22,7 @@ function EChart({ option, height = 300 }: { option: any; height?: number }) {
   return <div ref={ref} style={{ height }} />
 }
 
-const AXIS = { axisLine: { lineStyle: { color: '#2a2f2b' } }, axisLabel: { color: '#8b948c', fontSize: 10, fontFamily: 'JetBrains Mono' }, splitLine: { lineStyle: { color: '#1d221f' } } }
+const AXIS = { axisLine: { lineStyle: { color: '#d7dad2' } }, axisLabel: { color: '#5d675f', fontSize: 10, fontFamily: 'JetBrains Mono' }, splitLine: { lineStyle: { color: '#e4e7df' } } }
 
 /* ── H3 density heatmap ── */
 function HexHeat({ data }: { data: any[] }) {
@@ -33,7 +33,7 @@ function HexHeat({ data }: { data: any[] }) {
     if (!el.current || mapRef.current) return
     const map = new maplibregl.Map({
       container: el.current,
-      style: { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#0d100e' } }] },
+      style: { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#dfe7ea' } }] },
       center: [-95, 35], zoom: 3.6, attributionControl: false,
     })
     map.on('load', () => { mapRef.current = map; setReady(true) })
@@ -77,7 +77,7 @@ function DepthProfile() {
   return (
     <div className="panel">
       <div className="flex items-center justify-between px-4 py-2.5 hairline-b">
-        <span className="microtype">bathymetric depth profile · ETOPO1 via NOAA ERDDAP</span>
+        <span className="microtype">bathymetric depth profile · EMODnet DTM via OpenTopoData (European waters)</span>
         <select className="btn" value={voy} onChange={(e) => setVoy(e.target.value)}>
           {list.map((v) => <option key={v} value={v}>{v.slice(0, 22)}</option>)}
         </select>
@@ -266,6 +266,188 @@ function HmmPanel() {
   )
 }
 
+
+/* ── historical track replay + scrubber + gaps + FSM + fuel series ── */
+function ReplayPanel() {
+  const [list, setList] = useState<string[]>([])
+  const [vid, setVoy] = useState('')
+  const [rep, setRep] = useState<any>(null)
+  const [idx, setIdx] = useState(0)
+  const [playing, setPlaying] = useState(false)
+  const el = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<maplibregl.Map | null>(null)
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    fetch(API + '/v1/voyages?limit=25').then((r) => r.json()).then((d: any) => {
+      if (!d?.voyages) return
+      setList(d.voyages.map((v: any) => v.voyage_id))
+      setVoy(d.voyages[0]?.voyage_id ?? '')
+    })
+  }, [])
+  useEffect(() => {
+    if (vid) fetch(`${API}/v2/analytics/replay/${vid}`).then((r) => r.json()).then((d) => {
+      setRep(d); setIdx(0)
+      if ((d?.coords?.length ?? 0) < 8) {  // thin track: try the next voyage ids
+        const next = list.filter((x) => x !== vid)[0]
+        if (next) setVoy(next)
+      }
+    })
+  }, [vid])
+  useEffect(() => {
+    if (!el.current || mapRef.current) return
+    const map = new maplibregl.Map({
+      container: el.current,
+      style: { version: 8,
+        sources: { gebco: { type: 'raster',
+          tiles: ['https://wms.gebco.net/mapserv?request=GetMap&service=WMS&version=1.1.1&format=image/png&STYLES=default&layers=GEBCO_LATEST_SUB_ICE_TOPO&width=512&height=512&bbox={bbox-epsg-3857}'],
+          tileSize: 512 } },
+        layers: [
+          { id: 'bg', type: 'background', paint: { 'background-color': '#dfe7ea' } },
+          { id: 'gebco', type: 'raster', source: 'gebco', paint: { 'raster-opacity': 0.9 } }] },
+      center: [-90, 30], zoom: 4.2, attributionControl: { compact: true } })
+    map.on('load', () => { mapRef.current = map; setReady(true) })
+    return () => { map.remove(); mapRef.current = null }
+  }, [])
+  useEffect(() => {
+    const map = mapRef.current
+    if (!ready || !map || !rep?.coords?.length) return
+    const line = { type: 'Feature', geometry: { type: 'LineString', coordinates: rep.coords }, properties: {} }
+    const upto = rep.coords.slice(0, idx + 1)
+    const flown = { type: 'Feature', geometry: { type: 'LineString', coordinates: upto.length > 1 ? upto : [rep.coords[0], rep.coords[0]] }, properties: {} }
+    const pos = { type: 'FeatureCollection', features: [{
+      type: 'Feature', geometry: { type: 'Point', coordinates: rep.coords[Math.min(idx, rep.coords.length - 1)] },
+      properties: {} }] }
+    for (const [id, data] of [['track', { type: 'FeatureCollection', features: [line] } as any],
+                              ['flown', { type: 'FeatureCollection', features: [flown] } as any],
+                              ['pos', pos as any]]) {
+      if (map.getSource(id)) (map.getSource(id) as any).setData(data)
+      else map.addSource(id, { type: 'geojson', data })
+    }
+    for (const [id, layer] of [
+      ['track-l', { id: 'track-l', type: 'line', source: 'track', paint: { 'line-color': '#5d675f', 'line-width': 2, 'line-dasharray': [2, 2] as any } }],
+      ['flown-l', { id: 'flown-l', type: 'line', source: 'flown', paint: { 'line-color': '#0e6e5c', 'line-width': 3 } }],
+      ['pos-c', { id: 'pos-c', type: 'circle', source: 'pos', paint: { 'circle-radius': 7, 'circle-color': '#c2410c', 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' } }]] as const) {
+      if (!map.getLayer(id)) map.addLayer(layer)
+    }
+    const lons = rep.coords.map((c: any) => c[0]); const lats = rep.coords.map((c: any) => c[1])
+    map.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: 40, duration: 0 })
+  }, [rep, ready, idx])
+  useEffect(() => {
+    if (!playing || !rep) return
+    const t = setInterval(() => setIdx((i) => {
+      if (i >= rep.coords.length - 1) { setPlaying(false); return i }
+      return i + 1
+    }), 220)
+    return () => clearInterval(t)
+  }, [playing, rep])
+
+  const cur = rep?.fsm?.[Math.min(idx, (rep?.fsm?.length ?? 1) - 1)]
+  return (
+    <div className="panel">
+      <div className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: '1px solid var(--color-rule)' }}>
+        <span className="microtype">historical track replay · playback scrubber · gap indicators · FSM badges</span>
+        <select className="btn" value={vid} onChange={(e) => setVoy(e.target.value)}>
+          {list.map((v) => <option key={v} value={v}>{v.slice(0, 22)}</option>)}
+        </select>
+      </div>
+      <div ref={el} className="h-[320px]" />
+      <div className="px-4 py-3" style={{ borderTop: '1px solid var(--color-rule)' }}>
+        <div className="flex items-center gap-3">
+          <button className="btn btn-acc" onClick={() => setPlaying(!playing)}>{playing ? 'PAUSE' : 'PLAY'}</button>
+          <input type="range" min={0} max={(rep?.coords?.length ?? 1) - 1} value={idx}
+            onChange={(e) => setIdx(+e.target.value)} className="flex-1" />
+          <span className="mono text-xs text-dim">{idx + 1}/{rep?.coords?.length ?? 0}</span>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1.5 items-center">
+          {cur && <span className="chip chip-acc">FSM: {cur.state} · {cur.phase} · band {cur.sog_band}</span>}
+          {rep?.gaps?.gaps?.slice(0, 3).map((g: any, i: number) => (
+            <span key={i} className="chip chip-bad">AIS drop-out {g.gap_min} min</span>
+          ))}
+          {rep?.gaps && <span className="chip chip-ok">signal coverage {(rep.gaps.coverage * 100).toFixed(1)}%</span>}
+        </div>
+        {rep && (
+          <EChart height={180} option={{
+            grid: { left: 44, right: 12, top: 18, bottom: 26 },
+            xAxis: { type: 'category', data: rep.sog.map((_: any, i: number) => i), ...AXIS },
+            yAxis: { type: 'value', name: 'SOG kn', ...AXIS },
+            series: [
+              { type: 'line', data: rep.sog, symbol: 'none', lineStyle: { color: '#aab1a5', width: 1 } },
+              { type: 'line', data: rep.sog_smoothed, symbol: 'none', lineStyle: { color: '#0e6e5c', width: 2 },
+                areaStyle: { color: 'rgba(14,110,92,0.08)' } },
+            ],
+            tooltip: { trigger: 'axis' },
+          }} />
+        )}
+        {rep && (
+          <EChart height={150} option={{
+            grid: { left: 44, right: 12, top: 18, bottom: 26 },
+            xAxis: { type: 'category', data: rep.fuel_series_t_day.map((_: any, i: number) => i), ...AXIS },
+            yAxis: { type: 'value', name: 'fuel t/day', ...AXIS },
+            series: [{ type: 'line', data: rep.fuel_series_t_day, symbol: 'none',
+                       lineStyle: { color: '#a86a00', width: 2 } }],
+            tooltip: { trigger: 'axis' },
+          }} />
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* ── wave field + wind barbs ── */
+function WaveField() {
+  const [d, setD] = useState<any>(null)
+  useEffect(() => { fetch(API + '/v2/live/wavefield?lat=59.5&lon=21&step=1&n=4').then((r) => r.json()).then(setD) }, [])
+  const grid = d?.grid ?? []
+  return (
+    <div className="panel p-4">
+      <div className="microtype" style={{ borderBottom: '1px solid var(--color-rule)', paddingBottom: 8 }}>
+        wave height gradient field + wind barbs · Open-Meteo marine grid (Baltic)
+      </div>
+      <EChart height={230} option={grid.length ? {
+        grid: { left: 50, right: 16, top: 20, bottom: 30 },
+        xAxis: { type: 'value', name: 'lon +', min: 0, max: 3, ...AXIS },
+        yAxis: { type: 'value', name: 'lat +', min: 0, max: 3, ...AXIS },
+        visualMap: { min: 0, max: Math.max(1.5, ...grid.map((c: any) => c.wave_height ?? 0)),
+                     calculable: true, orient: 'horizontal', left: 'center', bottom: 0,
+                     inRange: { color: ['#cfe3de', '#0e6e5c'] }, textStyle: { color: '#5d675f' } },
+        series: [
+          { type: 'heatmap', data: grid.map((c: any) => [c.lng - 21, c.lat - 59.5, c.wave_height ?? 0]),
+            pointSize: 18, blurSize: 24 },
+          { type: 'scatter', symbol: 'triangle', symbolSize: 10, symbolRotate: grid.map((c: any) => (c.wind_dir_deg ?? 0)),
+            data: grid.map((c: any) => [c.lng - 21, c.lat - 59.5]),
+            itemStyle: { color: '#17201b' }, z: 5 },
+        ],
+        tooltip: { formatter: (p: any) => `cell ${p.data[0].toFixed(0)},${p.data[1].toFixed(0)}` },
+      } : {}} />
+      <div className="mono mt-1 text-[11px] text-dim">triangles = wind direction barbs at cell centers; color field = significant wave height</div>
+    </div>
+  )
+}
+
+/* ── bathymetric contour slice ── */
+function ContourSlice() {
+  const [d, setD] = useState<any>(null)
+  useEffect(() => { fetch(API + '/v2/live/bathymetry?lat=59.9&lon=24.9').then((r) => r.json()).then(setD) }, [])
+  const pts = d?.profile ?? []
+  return (
+    <div className="panel p-4">
+      <div className="microtype" style={{ borderBottom: '1px solid var(--color-rule)', paddingBottom: 8 }}>
+        bathymetric cross-section · EMODnet DTM via OpenTopoData (Gulf of Finland transect)
+      </div>
+      <EChart height={200} option={pts.length ? {
+        grid: { left: 50, right: 12, top: 18, bottom: 26 },
+        xAxis: { type: 'category', data: pts.map((_: any, i: number) => i), ...AXIS },
+        yAxis: { type: 'value', inverse: true, name: 'depth m', ...AXIS },
+        series: [{ type: 'line', data: pts.map((p: any) => p.depth_m), smooth: true, showSymbol: false,
+                   lineStyle: { color: '#0d7d8c', width: 2 }, areaStyle: { color: 'rgba(13,125,140,0.12)' } }],
+        tooltip: { trigger: 'axis', formatter: (ps: any) => ps.map((p: any) =>
+          `${pts[p.dataIndex].lat.toFixed(2)}, ${pts[p.dataIndex].lon.toFixed(2)} → ${p.value} m`).join('<br/>') },
+      } : {}} />
+    </div>
+  )
+}
+
 export default function Analytics() {
   const [res, setRes] = useState(4)
   const [hexes, setHexes] = useState<any[]>([])
@@ -305,6 +487,15 @@ export default function Analytics() {
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
         <DepthProfile />
         <HmmPanel />
+      </div>
+
+      <div className="mt-4 grid gap-4 xl:grid-cols-2">
+        <WaveField />
+        <ContourSlice />
+      </div>
+
+      <div className="mt-4">
+        <ReplayPanel />
       </div>
 
       <Footer />

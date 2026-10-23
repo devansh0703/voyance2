@@ -5,17 +5,18 @@
    Hairline rules, mono microtype, flat surfaces, one accent. ── */
 
 @theme {
-  --color-ink: #0b0d0c;
-  --color-panel: #121513;
-  --color-panel2: #171b18;
-  --color-rule: #2a2f2b;
-  --color-paper: #e7ece6;
-  --color-dim: #8b948c;
-  --color-acc: #ffb454;
-  --color-ok: #6fdc8c;
-  --color-warn: #ffcf5c;
-  --color-bad: #ff6b57;
-  --color-cyan: #7adccf;
+  /* light theme (default) — paper surface, ink text, marine-blue accent */
+  --color-ink: #f4f5f1;
+  --color-panel: #fcfcfa;
+  --color-panel2: #eef0ea;
+  --color-rule: #d7dad2;
+  --color-paper: #17201b;
+  --color-dim: #5d675f;
+  --color-acc: #0e6e5c;          /* deep marine teal accent */
+  --color-ok: #157a4a;
+  --color-warn: #a86a00;
+  --color-bad: #c2402e;
+  --color-cyan: #0d7d8c;
   --font-display: "Sora", system-ui, sans-serif;
   --font-body: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
@@ -73,6 +74,10 @@ table.dense th {
 }
 table.dense td { padding: 6px 10px; border-bottom: 1px solid #1d221f; }
 table.dense tr:hover td { background: var(--color-panel2); }
+.color-acc { color: var(--color-acc); }
+.color-bad { color: var(--color-bad); }
+.color-warn { color: var(--color-warn); }
+.color-ok { color: var(--color-ok); }
 
 .btn {
   font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em;
@@ -98,11 +103,12 @@ table.dense tr:hover td { background: var(--color-panel2); }
 .ticker > div { display: inline-block; animation: slide 60s linear infinite; }
 @keyframes slide { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
-::selection { background: rgba(255,180,84,.35); }
+::selection { background: rgba(14,110,92,.25); }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: var(--color-ink); }
-::-webkit-scrollbar-thumb { background: #2a2f2b; }
-::-webkit-scrollbar-thumb:hover { background: #3c423d; }
+::-webkit-scrollbar-thumb { background: #c4c9bf; }
+::-webkit-scrollbar-thumb:hover { background: #aab1a5; }
 
 .maplibregl-ctrl-group { background: var(--color-panel) !important; border-radius: 0 !important; }
+.btn select, select.btn { background: var(--color-panel); color: var(--color-paper); }
 .maplibregl-canvas { outline: none; }

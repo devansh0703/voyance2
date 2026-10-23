@@ -43,8 +43,28 @@ app = FastAPI(
 )
 Instrumentator().instrument(app).expose(app)
 
-from backend.live.service import router as live_router  # noqa: E402
+from backend.live.service import router as live_router, _usage  # noqa: E402
 app.include_router(live_router)
+
+
+class _UsageMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            _usage["requests"] += 1
+            p = scope.get("path", "")
+            if "predict" in p:
+                _usage["predict"] += 1
+            if p.startswith("/v2/live"):
+                _usage["live"] += 1
+            if p.startswith("/v2/analytics"):
+                _usage["analytics"] += 1
+        await self.app(scope, receive, send)
+
+
+app.add_middleware(_UsageMiddleware)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 

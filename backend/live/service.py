@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 from fastapi import APIRouter, HTTPException, Query
 
-from . import analytics, kinematics, sources
+from . import algo2, analytics, kinematics, sources, sources2
 
 ROOT = Path(__file__).resolve().parents[2]
 MODELS = ROOT / "models"
@@ -297,3 +297,212 @@ def health_quality():
     }
     return {"probe": "z-score + IQR + NaN audit on live sample store + upstream reachability",
             "checks": checks, "generated_utc": pd.Timestamp.utcnow().isoformat()}
+
+
+# ---------- second-wave sources ----------
+
+@router.get("/live/dma")
+def live_dma():
+    return {"source": "Danish Maritime Authority open AIS", "vessels": sources2.dma_ais_vessels()}
+
+
+@router.get("/live/argo")
+def live_argo():
+    return {"source": "Argo floats via ERDDAP (open data)", "floats": sources2.argo_floats()}
+
+
+@router.get("/live/water")
+def live_water(state: str = "fl"):
+    return {"source": "USGS Water Services instantaneous values (public domain)",
+            "stations": sources2.usgs_water_stations(state)}
+
+
+@router.get("/live/harbors")
+def live_harbors(south: float = 59.5, west: float = 22.0, north: float = 60.8, east: float = 28.5):
+    return {"source": "OpenStreetMap Overpass (ODbL)", "harbors": sources2.overpass_harbors(south, west, north, east)}
+
+
+@router.get("/live/radar")
+def live_radar():
+    return {"source": "RainViewer public radar (keyless)", **sources2.rainviewer_frames()}
+
+
+@router.get("/live/wpi")
+def live_wpi():
+    return {"source": "World Port Index (NGA) community mirror (public domain)",
+            "ports": sources2.wpi_ports()}
+
+
+@router.get("/live/geology")
+def live_geology(west: float = 22.0, south: float = 59.0, east: float = 30.0, north: float = 61.5):
+    return {"source": "EMODnet Geology WFS seabed substrate (CC BY 4.0)",
+            "subsets": sources2.emodnet_geology(west, south, east, north)}
+
+
+@router.get("/live/naturalearth")
+def live_naturalearth():
+    gj = sources2.natural_earth_coastline()
+    return {"source": "Natural Earth (public domain)", "features": len(gj.get("features", []))}
+
+
+# ---------- second-wave analytics ----------
+
+@router.get("/analytics/gaps")
+def analytics_gaps(limit: int = 12):
+    """AIS signal drop-out gap analysis per historical voyage."""
+    df = _hist()
+    if df is None:
+        raise HTTPException(503, "historical samples missing")
+    out = []
+    for vid, g in list(df.groupby("voyage_id"))[:limit]:
+        ts = pd.to_datetime(g["ts"], utc=True).astype("int64").tolist()
+        out.append({"voyage_id": vid, **algo2.gap_analysis(ts)})
+    return {"threshold_min": 30.0, "voyages": out,
+            "model": "temporal sequence gap analysis (drop-out indicator source)"}
+
+
+@router.get("/analytics/fsm")
+def analytics_fsm(sog_series: str):
+    series = [float(x) for x in sog_series.split(",")]
+    return {"model": "rule-based finite state machine + SOG threshold bands",
+            "sequence": algo2.fsm_sequence(series)}
+
+
+@router.get("/analytics/sog-histogram")
+def analytics_sog_histogram():
+    df = _hist()
+    if df is None:
+        raise HTTPException(503, "historical samples missing")
+    sog = df["sog"].dropna().to_numpy()
+    bands = {}
+    for v in sog:
+        b = algo2.sog_threshold_band(float(v))
+        bands[b] = bands.get(b, 0) + 1
+    hist, edges = np.histogram(sog, bins=40, range=(0, 25))
+    return {"histogram": [{"bin_lo": round(float(edges[i]), 2),
+                           "bin_hi": round(float(edges[i + 1]), 2), "n": int(hist[i])}
+                          for i in range(len(hist)) if hist[i] > 0],
+            "threshold_bands": bands,
+            "model": "SOG distribution thresholding (behavioral bands)"}
+
+
+@router.get("/analytics/linkage2")
+def analytics_linkage2(query: str, lat: float | None = None, lon: float | None = None):
+    from pathlib import Path as P
+    f = P(__file__).resolve().parents[2] / "data" / "processed" / "ports-clustered.csv"
+    if not f.exists():
+        raise HTTPException(503, "ports table missing")
+    ports = pd.read_csv(f)
+    candidates = ports.head(3000).to_dict("records")
+    return {"query": query, "model": "probabilistic record linkage (Fellegi-Sunter style)",
+            "matches": algo2.probabilistic_linkage(query, candidates, lat, lon)[:8]}
+
+
+@router.get("/analytics/mmsi-imo")
+def analytics_mmsi_imo():
+    v = sources.digitraffic_vessels(200)
+    meta = sources.digitraffic_vessel_metadata()
+    enriched = [{**x, "imo": (meta.get(x["mmsi"]) or {}).get("imo")} for x in v]
+    return {"model": "MMSI/IMO lookup table hashing", **algo2.mmsi_imo_hash(enriched)}
+
+
+@router.get("/analytics/dwt-fit")
+def analytics_dwt_fit():
+    df = _hist()
+    if df is None:
+        raise HTTPException(503, "historical samples missing")
+    d = df.dropna(subset=["vessel_length", "vessel_draft"])
+    d = d[d["vessel_length"] > 10]
+    fit = algo2.fit_dwt_powerlaw(d["vessel_length"].to_numpy(),
+                                 (d["vessel_draft"] * d["vessel_length"]).to_numpy() / 3.0)
+    return {"model": "deadweight tonnage power-law scaling (log-log fit on AIS length/draft proxy)",
+            **fit}
+
+
+@router.get("/analytics/replay/{voyage_id}")
+def analytics_replay(voyage_id: str):
+    """Historical track replay bundle: coords, SOG series, gaps, FSM states, fuel series."""
+    df = _hist()
+    if df is None:
+        raise HTTPException(503, "historical samples missing")
+    try:  # fall back across all months so any exported voyage id replays
+        extra = [pd.read_parquet(ROOT / "data" / "interim" / f"features-{m}.parquet")
+                 for m in ("2024-01", "2024-04")]
+        for ex in extra:
+            ex = ex[ex["vessel_type_group"].isin(["cargo", "tanker", "passenger"])]
+            if voyage_id in set(ex["voyage_id"]):
+                df = pd.concat([df, ex], ignore_index=True)
+                break
+    except Exception:  # noqa: BLE001
+        pass
+    s = df[df["voyage_id"] == voyage_id].sort_values("ts")
+    if s.empty:
+        raise HTTPException(404, "voyage not found")
+    sog = s["sog"].fillna(0).tolist()
+    ts = pd.to_datetime(s["ts"], utc=True).astype("int64").tolist()
+    gaps = algo2.gap_analysis(ts)
+    smoothed = algo2.bidirectional_smooth(sog)
+    fuel_pts = []
+    for la, lo, v, wd in zip(s["lat"], s["lon"], sog, [0.8] * len(sog)):
+        f = analytics.fuel_consumption_t_per_day(max(v, 1), wd, float(s["vessel_length"].iloc[0] or 180), 50000)
+        fuel_pts.append(round(f["fuel_t_per_day"], 2))
+    return {"voyage_id": voyage_id,
+            "coords": [[round(float(a), 4), round(float(b), 4)] for a, b in zip(s["lat"], s["lon"])],
+            "sog": [round(float(x), 2) for x in sog],
+            "sog_smoothed": [round(float(x), 2) for x in smoothed],
+            "ts": ts, "gaps": gaps, "fsm": algo2.fsm_sequence(sog),
+            "fuel_series_t_day": fuel_pts,
+            "carbon_badge": analytics.co2_emissions(sum(fuel_pts) * (gaps["coverage"] or 1) * 24 / 24)["co2_t"]}
+
+
+# ---------- wave field grid + wind barbs (Open-Meteo marine grid) ----------
+
+@router.get("/live/wavefield")
+def wavefield(lat: float = 59.5, lon: float = 21.0, step: float = 1.0, n: int = 4):
+    """n×n marine grid around a point: wave height + wind vectors for field overlays."""
+    cells = []
+    for i in range(n):
+        for j in range(n):
+            la = lat + i * step
+            lo = lon + j * step
+            m = sources.open_meteo_marine(la, lo)
+            w = sources.open_meteo_forecast(la, lo)
+            cells.append({"lat": round(la, 2), "lng": round(lo, 2),
+                          "wave_height": m.get("wave_height"),
+                          "wave_period": m.get("wave_period"),
+                          "wind_kn": w.get("wind_speed_10m"),
+                          "wind_dir_deg": w.get("wind_direction_10m")})
+    return {"grid": cells, "n": n, "step_deg": step,
+            "attribution": "Open-Meteo marine+forecast (CC BY 4.0)"}
+
+
+# ---------- API usage dashboard counters ----------
+
+_usage: dict[str, int] = {"requests": 0, "predict": 0, "live": 0, "analytics": 0}
+
+
+@router.get("/usage")
+def usage():
+    return {"counters": _usage, "note": "in-process counters since last restart"}
+
+
+@router.get("/live/datasets")
+def datasets_status():
+    """Downloadable dataset registry + availability (drives progress modal)."""
+    import os
+    raw = ROOT / "data" / "raw"
+    items = []
+    for name, label in [
+        ("unlocode.csv", "UN/LOCODE code list"),
+        ("ais-track-2024-01.parquet", "NOAA AIS tracks 2024-01"),
+        ("ais-track-2024-04.parquet", "NOAA AIS tracks 2024-04"),
+        ("ais-track-2024-07.parquet", "NOAA AIS tracks 2024-07"),
+        ("ais-2024-01-08.parquet", "NOAA AIS points 2024-01-08"),
+        ("ais-2024-04-08.parquet", "NOAA AIS points 2024-04-08"),
+        ("ais-2024-07-08.parquet", "NOAA AIS points 2024-07-08"),
+    ]:
+        f = raw / name
+        items.append({"file": name, "label": label,
+                      "present": f.exists(),
+                      "size_mb": round(f.stat().st_size / 1e6, 1) if f.exists() else 0})
+    return {"datasets": items, "note": "raw archive data is re-downloadable via make data"}

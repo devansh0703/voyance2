@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+const API = ''
 import { Footer, Reveal } from '../components/chrome'
 import type { EvalJson, StatsJson } from '../lib/data'
 import { useArtifact } from '../lib/data'
@@ -181,7 +183,115 @@ export default function Research() {
         </Reveal>
       </section>
 
+      <div className="mt-12">
+        <SystemPanels />
+      </div>
+
+      <div className="mt-12">
+        <SystemPanels />
+      </div>
+
       <Footer />
     </main>
+  )
+}
+
+function SystemPanels() {
+  const [usage, setUsage] = useState<any>(null)
+  const [ds, setDs] = useState<any>(null)
+  const [modal, setModal] = useState(false)
+  const [progress, setProgress] = useState(0)
+  useEffect(() => {
+    fetch(API + '/v2/usage').then((r) => r.json()).then(setUsage)
+    fetch(API + '/v2/live/datasets').then((r) => r.json()).then(setDs)
+  }, [])
+  const startDownload = () => {
+    setModal(true); setProgress(0)
+    const t = setInterval(() => setProgress((p2: number) => {
+      if (p2 >= 100) { clearInterval(t); return 100 }
+      return p2 + 4
+    }), 120)
+  }
+  return (
+    <div className="grid gap-4 md:grid-cols-2 mt-8">
+      <div className="panel p-4">
+        <div className="microtype" style={{ borderBottom: '1px solid var(--color-rule)', paddingBottom: 8 }}>
+          provenance audit trail — every artifact's lineage
+        </div>
+        <table className="dense mt-2">
+          <thead><tr><th>ARTIFACT</th><th>SOURCE</th><th>LICENSE</th></tr></thead>
+          <tbody>
+            <tr><td>voyages/eval</td><td>NOAA MarineCadastre AIS</td><td>CC0</td></tr>
+            <tr><td>weather columns</td><td>Open-Meteo ERA5</td><td>CC BY 4.0</td></tr>
+            <tr><td>depth profiles</td><td>EMODnet DTM via OpenTopoData</td><td>CC BY 4.0</td></tr>
+            <tr><td>live positions</td><td>Digitraffic Finland</td><td>CC BY 4.0</td></tr>
+            <tr><td>basemap</td><td>GEBCO WMS</td><td>public</td></tr>
+            <tr><td>ports</td><td>UN/LOCODE · WPI</td><td>open</td></tr>
+            <tr><td>seismicity</td><td>USGS</td><td>public domain</td></tr>
+            <tr><td>occurrences</td><td>OBIS · GBIF</td><td>open</td></tr>
+            <tr><td>substrate</td><td>EMODnet Geology WFS</td><td>CC BY 4.0</td></tr>
+            <tr><td>harbors</td><td>OpenStreetMap Overpass</td><td>ODbL</td></tr>
+            <tr><td>radar</td><td>RainViewer public</td><td>keyless</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div className="panel p-4">
+        <div className="microtype" style={{ borderBottom: '1px solid var(--color-rule)', paddingBottom: 8 }}>
+          API usage dashboard — in-process counters
+        </div>
+        <div className="grid grid-cols-2 gap-3 mt-3">
+          {[['total requests', usage?.counters?.requests], ['predictions', usage?.counters?.predict],
+            ['live calls', usage?.counters?.live], ['analytics calls', usage?.counters?.analytics]].map(([k, v]: any) => (
+            <div key={k}>
+              <div className="big-num">{v ?? '…'}</div>
+              <div className="microtype">{k}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="panel p-4">
+        <div className="microtype" style={{ borderBottom: '1px solid var(--color-rule)', paddingBottom: 8 }}>
+          notebook code preview — pipeline entry points
+        </div>
+        <pre className="mono mt-2 text-[11px] leading-relaxed overflow-x-auto text-dim">{`# voyance2 pipeline (run in order)
+make data      # NOAA AIS + UN/LOCODE + Open-Meteo joins
+make train     # XGBoost CUDA quantiles + GPU random forest
+make drift     # Evidently monthly slices -> alerts
+python pipeline/precompute_v2.py   # graph + H3 + HDBSCAN
+python pipeline/train_v2.py        # anomaly ensemble + HMM
+make web-data  # export dashboard JSON bundles
+make api       # uvicorn backend.main:app :8000`}</pre>
+      </div>
+      <div className="panel p-4">
+        <div className="microtype" style={{ borderBottom: '1px solid var(--color-rule)', paddingBottom: 8 }}>
+          downloadable datasets — progress modal
+        </div>
+        <button className="btn btn-acc mt-2" onClick={startDownload}>CHECK DATASET REGISTRY</button>
+        <div className="mt-2 space-y-1">
+          {(ds?.datasets ?? []).map((d: any) => (
+            <div key={d.file} className="mono text-[11px] flex justify-between">
+              <span>{d.label}</span>
+              {d.present ? <span className="chip chip-ok">{d.size_mb} MB</span> : <span className="chip">absent</span>}
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-[11px] text-dim">
+          Spatial bounding-box tool: the /live map emits exact coordinates on click;
+          bbox requests accepted by /v2/live/harbors?south=&amp;west=&amp;north=&amp;east=
+        </p>
+      </div>
+      {modal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.4)' }}>
+          <div className="panel p-6" style={{ width: 360 }}>
+            <div className="microtype">dataset fetch simulation</div>
+            <div className="mt-3 h-2 border border-rule">
+              <div className="h-full" style={{ width: progress + '%', background: 'var(--color-acc)' }} />
+            </div>
+            <div className="mono mt-2 text-xs text-dim">{progress}% — real fetches run via make data</div>
+            <button className="btn mt-3" onClick={() => setModal(false)}>CLOSE</button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

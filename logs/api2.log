@@ -1,66 +1,71 @@
-INFO:     Started server process [20152]
+INFO:     Started server process [296227]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://127.0.0.1:8010 (Press CTRL+C to quit)
-INFO:     127.0.0.1:59668 - "GET /live HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59668 - "GET /assets/index-JzI-QK3Y.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59676 - "GET /assets/index-VEtywO0e.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59714 - "GET /assets/maplibre-gl-worker.mjs?v=6.15.0 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59680 - "GET /v2/live/collision HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59676 - "GET /v2/health-quality HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59668 - "GET /v2/live/vessels?limit=40 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59702 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:59692 - "GET /v2/live/weather?lat=60.15&lon=24.95 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:33424 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50122 - "GET /v2/live/collision HTTP/1.1" 200 OK
-INFO:     127.0.0.1:53340 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49636 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:49634 - "GET /v2/live/collision HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50898 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58610 - "GET /v2/live/collision HTTP/1.1" 200 OK
-INFO:     127.0.0.1:35876 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:39198 - "GET /v2/live/collision HTTP/1.1" 200 OK
-INFO:     127.0.0.1:39204 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51434 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50882 - "GET /v2/live/collision HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55392 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54112 - "GET /v2/live/collision HTTP/1.1" 200 OK
-INFO:     127.0.0.1:54114 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:32824 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:37370 - "GET /v2/live/collision HTTP/1.1" 200 OK
-INFO:     127.0.0.1:42604 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:39118 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:39110 - "GET /v2/live/collision HTTP/1.1" 200 OK
-INFO:     127.0.0.1:60846 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:44384 - "GET /v2/live/collision HTTP/1.1" 200 OK
-INFO:     127.0.0.1:34066 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:39960 - "GET /v2/live/collision HTTP/1.1" 200 OK
-INFO:     127.0.0.1:39968 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55000 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:39794 - "GET /v2/live/collision HTTP/1.1" 200 OK
-INFO:     127.0.0.1:34342 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55316 - "GET /v2/live/collision HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55332 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51112 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:34440 - "GET /v2/live/collision HTTP/1.1" 200 OK
-INFO:     127.0.0.1:34588 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:46400 - "GET /v2/live/collision HTTP/1.1" 200 OK
-INFO:     127.0.0.1:46404 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:58672 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52210 - "GET /v2/live/collision HTTP/1.1" 200 OK
-INFO:     127.0.0.1:48176 - "GET /analytics HTTP/1.1" 200 OK
-INFO:     127.0.0.1:48176 - "GET /assets/index-JzI-QK3Y.js HTTP/1.1" 200 OK
-INFO:     127.0.0.1:48178 - "GET /assets/index-VEtywO0e.css HTTP/1.1" 200 OK
-INFO:     127.0.0.1:48176 - "GET /assets/maplibre-gl-worker.mjs?v=6.15.0 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:48190 - "GET /v2/analytics/fuel?sog_kn=12&wave_height_m=1.5&vessel_length_m=180&dwt_t=50000&distance_nm=500 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:48190 - "GET /v1/voyages?limit=30 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:48210 - "GET /v2/analytics/h3?resolution=4 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:48210 - "GET /v2/live/bathymetry?voyage_id=209182000-1704921876000 HTTP/1.1" 404 Not Found
-INFO:     127.0.0.1:48204 - "GET /v2/analytics/hmm?sog_series=12.2,14.5,16.1,17.9,18.0,18.4,17.6,16.9,15.4,13.5,11.8,9.1,8.4,7.2,6.8,6.5,7.2,1.5,3.1,4.4,6.3,8.5,9.6,10.4 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:48192 - "GET /v2/analytics/anchorages HTTP/1.1" 200 OK
-INFO:     127.0.0.1:48176 - "GET /v2/analytics/anomaly?lat=33.7&lon=-118.2&sog=0.2&remaining_distance_nm=80 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:48218 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:48178 - "GET /v2/live/overlays/biodiversity?lat=59.9&lon=23.5 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:42010 - "GET /v2/live/collision HTTP/1.1" 200 OK
-INFO:     127.0.0.1:42026 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:36012 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37476 - "GET /v2/live/collision HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37476 - "GET /live HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37476 - "GET /assets/index-DFmCZz2m.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37484 - "GET /assets/index-DUJmKWLA.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37500 - "GET /v2/live/collision HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37492 - "GET /assets/maplibre-gl-worker.mjs?v=6.15.0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37500 - "GET /v2/live/collision HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37484 - "GET /v2/health-quality HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37476 - "GET /v2/live/vessels?limit=40 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37528 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37516 - "GET /v2/live/weather?lat=60.15&lon=24.95 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37516 - "GET /analytics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41230 - "GET /v2/analytics/fuel?sog_kn=12&wave_height_m=1.5&vessel_length_m=180&dwt_t=50000&distance_nm=500 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41230 - "GET /v1/voyages?limit=30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37516 - "GET /v2/analytics/anomaly?lat=33.7&lon=-118.2&sog=0.2&remaining_distance_nm=80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41246 - "GET /v2/analytics/hmm?sog_series=12.1,14.1,16.5,17.5,18.3,18.6,18.4,16.7,15.2,13.2,11.7,9.7,7.7,7.2,6.6,7.0,7.6,1.4,2.5,4.5,6.9,8.0,10.1,10.3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41240 - "GET /v2/analytics/anchorages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37516 - "GET /v1/voyages?limit=25 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41240 - "GET /v2/live/bathymetry?voyage_id=209182000-1704921876000 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:41246 - "GET /v2/analytics/h3?resolution=4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41246 - "GET /v2/analytics/replay/209182000-1704921876000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41230 - "GET /v2/live/bathymetry?lat=59.9&lon=24.9 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41224 - "GET /v2/live/overlays/biodiversity?lat=59.9&lon=23.5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38486 - "GET /dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38486 - "GET /assets/index-DFmCZz2m.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:38496 - "GET /assets/index-DUJmKWLA.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:38496 - "GET /data/map.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38496 - "GET /assets/maplibre-gl-worker.mjs?v=6.15.0 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:38486 - "GET /data/stats.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38486 - "GET /research HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38486 - "GET /v2/usage HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38496 - "GET /v2/live/datasets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38510 - "GET /v1/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38522 - "GET /v2/usage HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38486 - "GET /v2/live/datasets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43372 - "GET /live HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43372 - "GET /assets/index-DFmCZz2m.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:43378 - "GET /assets/index-DUJmKWLA.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:43408 - "GET /v2/live/weather?lat=60.15&lon=24.95 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43388 - "GET /assets/maplibre-gl-worker.mjs?v=6.15.0 HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:43372 - "GET /v2/health-quality HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43378 - "GET /v2/live/vessels?limit=40 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43398 - "GET /v2/live/collision HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43378 - "GET /v2/live/collision HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43388 - "GET /v2/live/vessels?limit=300 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60144 - "GET /analytics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60146 - "GET /v2/live/overlays/biodiversity?lat=59.9&lon=23.5 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60152 - "GET /v2/analytics/fuel?sog_kn=12&wave_height_m=1.5&vessel_length_m=180&dwt_t=50000&distance_nm=500 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60154 - "GET /v2/analytics/anchorages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60158 - "GET /v2/live/wavefield?lat=59.5&lon=21&step=1&n=4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60152 - "GET /v1/voyages?limit=30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60146 - "GET /v2/analytics/hmm?sog_series=13.0,14.7,16.0,17.2,18.7,18.0,18.1,17.0,15.2,13.0,11.7,9.9,8.4,7.1,6.2,6.7,8.1,1.4,2.7,4.5,6.4,8.7,9.7,10.0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60154 - "GET /v1/voyages?limit=25 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60158 - "GET /v2/analytics/h3?resolution=4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60144 - "GET /v2/analytics/anomaly?lat=33.7&lon=-118.2&sog=0.2&remaining_distance_nm=80 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60144 - "GET /v2/live/bathymetry?voyage_id=209182000-1704921876000 HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60144 - "GET /v2/analytics/replay/209182000-1704921876000 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60162 - "GET /v2/live/bathymetry?lat=59.9&lon=24.9 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60162 - "GET /dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60162 - "GET /data/map.json HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60162 - "GET /data/stats.json HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:60162 - "GET /research HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60144 - "GET /v2/live/datasets HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60162 - "GET /v2/usage HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60158 - "GET /v1/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60144 - "GET /v2/usage HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60154 - "GET /v2/live/datasets HTTP/1.1" 200 OK

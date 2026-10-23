@@ -143,6 +143,19 @@ def main():
     export_stats(frames)
     export_map(frames, voy)
     export_voyages_api(frames, voy)
+    # model CI ribbon: daily mean P10/P50/P90 from real test predictions
+    pf = REPORTS / "test_predictions.parquet"
+    if pf.exists():
+        pr = pd.read_parquet(pf)
+        pr["d"] = pd.to_datetime(pr["ts"], utc=True).dt.date
+        g = pr.groupby("d")[["p10", "p50", "p90"]].mean().reset_index()
+        (OUT / "ribbon.json").write_text(json.dumps({
+            "dates": [str(x) for x in g["d"]],
+            "p10": [round(float(x), 2) for x in g["p10"]],
+            "p50": [round(float(x), 2) for x in g["p50"]],
+            "p90": [round(float(x), 2) for x in g["p90"]]}))
+        print("ribbon.json written")
+
     for name in ("eval.json", "drift_summary.json"):
         src = REPORTS / name
         if src.exists():
