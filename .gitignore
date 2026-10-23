@@ -8,3 +8,4 @@ dist/
 web/dist/
 *.pyc
 .DS_Store
+models/rf-runtime.json
