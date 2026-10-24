@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import { Footer } from '../components/chrome'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { voyanceMapStyle } from '../lib/mapstyle'
 
 const API = ''
 
@@ -34,20 +35,7 @@ function LiveMap({ vessels, overlays, inspect, setInspect, setInspectData }: {
     if (!el.current || mapRef.current) return
     const map = new maplibregl.Map({
       container: el.current,
-      style: {
-        version: 8,
-        sources: {
-          gebco: { type: 'raster',
-            tiles: ['https://wms.gebco.net/mapserv?request=GetMap&service=WMS&version=1.1.1&format=image/png&STYLES=default&layers=GEBCO_LATEST_SUB_ICE_TOPO&width=512&height=512&bbox={bbox-epsg-3857}'],
-            tileSize: 512 },
-        },
-        layers: [
-          { id: 'bg', type: 'background', paint: { 'background-color': '#dfe7ea' } },
-          { id: 'gebco', type: 'raster', source: 'gebco', paint: { 'raster-opacity': 0.95 } },
-        ],
-      },
-      center: [21.5, 60.3], zoom: 5.2,
-      attributionControl: { compact: true },
+      style: voyanceMapStyle(),
     })
     map.on('load', () => { mapRef.current = map; setReady(true) })
     map.on('click', (e) => setInspect({ lat: e.lngLat.lat, lon: e.lngLat.lng }))
@@ -279,14 +267,8 @@ function EncounterView({ pairs, vessels }: { pairs: Pair[]; vessels: Vessel[] })
     if (!el.current || mapRef.current) return
     const map = new maplibregl.Map({
       container: el.current,
-      style: { version: 8,
-        sources: { gebco: { type: 'raster',
-          tiles: ['https://wms.gebco.net/mapserv?request=GetMap&service=WMS&version=1.1.1&format=image/png&STYLES=default&layers=GEBCO_LATEST_SUB_ICE_TOPO&width=512&height=512&bbox={bbox-epsg-3857}'],
-          tileSize: 512 } },
-        layers: [
-          { id: 'bg', type: 'background', paint: { 'background-color': '#dfe7ea' } },
-          { id: 'gebco', type: 'raster', source: 'gebco', paint: { 'raster-opacity': 0.9 } }] },
-      center: [21.5, 60.3], zoom: 8, attributionControl: { compact: true } })
+      style: voyanceMapStyle(),
+    })
     map.on('load', () => { mapRef.current = map; setReady(true) })
     return () => { map.remove(); mapRef.current = null }
   }, [])

@@ -3,6 +3,7 @@ import * as maplibregl from 'maplibre-gl'
 import * as echarts from 'echarts'
 import { Footer } from '../components/chrome'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { voyanceMapStyle } from '../lib/mapstyle'
 
 const API = ''
 async function j<T>(url: string): Promise<T | null> {
@@ -33,8 +34,7 @@ function HexHeat({ data }: { data: any[] }) {
     if (!el.current || mapRef.current) return
     const map = new maplibregl.Map({
       container: el.current,
-      style: { version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#dfe7ea' } }] },
-      center: [-95, 35], zoom: 3.6, attributionControl: false,
+      style: voyanceMapStyle(),
     })
     map.on('load', () => { mapRef.current = map; setReady(true) })
     return () => { map.remove(); mapRef.current = null }
@@ -298,14 +298,8 @@ function ReplayPanel() {
     if (!el.current || mapRef.current) return
     const map = new maplibregl.Map({
       container: el.current,
-      style: { version: 8,
-        sources: { gebco: { type: 'raster',
-          tiles: ['https://wms.gebco.net/mapserv?request=GetMap&service=WMS&version=1.1.1&format=image/png&STYLES=default&layers=GEBCO_LATEST_SUB_ICE_TOPO&width=512&height=512&bbox={bbox-epsg-3857}'],
-          tileSize: 512 } },
-        layers: [
-          { id: 'bg', type: 'background', paint: { 'background-color': '#dfe7ea' } },
-          { id: 'gebco', type: 'raster', source: 'gebco', paint: { 'raster-opacity': 0.9 } }] },
-      center: [-90, 30], zoom: 4.2, attributionControl: { compact: true } })
+      style: voyanceMapStyle(),
+    })
     map.on('load', () => { mapRef.current = map; setReady(true) })
     return () => { map.remove(); mapRef.current = null }
   }, [])

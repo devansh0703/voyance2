@@ -6,6 +6,7 @@ import { Footer, Reveal } from '../components/chrome'
 import type { DriftJson, EvalJson, MapJson, StatsJson } from '../lib/data'
 import { useArtifact } from '../lib/data'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { voyanceMapStyle } from '../lib/mapstyle'
 
 const API = ''
 const AXIS = { axisLine: { lineStyle: { color: '#d7dad2' } }, axisLabel: { color: '#5d675f', fontSize: 10, fontFamily: 'JetBrains Mono' }, splitLine: { lineStyle: { color: '#e4e7df' } } }
@@ -46,20 +47,7 @@ function MapTab() {
     if (!el.current || mapRef.current) return
     const map = new maplibregl.Map({
       container: el.current,
-      style: {
-        version: 8,
-        glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
-        sources: { gebco: { type: 'raster',
-          tiles: ['https://wms.gebco.net/mapserv?request=GetMap&service=WMS&version=1.1.1&format=image/png&STYLES=default&layers=GEBCO_LATEST_SUB_ICE_TOPO&width=512&height=512&bbox={bbox-epsg-3857}'],
-          tileSize: 512 } },
-        layers: [
-          { id: 'bg', type: 'background', paint: { 'background-color': '#dfe7ea' } },
-          { id: 'gebco', type: 'raster', source: 'gebco', paint: { 'raster-opacity': 0.9 } },
-        ],
-      },
-      center: [-95, 32],
-      zoom: 3.4,
-      attributionControl: { compact: true },
+      style: voyanceMapStyle(),
     })
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
     map.on('load', () => { mapRef.current = map; setMapReady(true) })

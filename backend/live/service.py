@@ -16,14 +16,30 @@ import numpy as np
 import pandas as pd
 from fastapi import APIRouter, HTTPException, Query
 
-from . import algo2, analytics, kinematics, sources, sources2
+from functools import lru_cache  # noqa: E402
+
+from . import ai, algo2, analytics, kinematics, sources, sources2
 
 ROOT = Path(__file__).resolve().parents[2]
 MODELS = ROOT / "models"
+CATEGORICAL = ["vessel_type_group", "region", "arr_port_idx", "dep_port_idx"]
 REPORTS = ROOT / "reports"
 ART = ROOT / "data" / "processed"
 
 router = APIRouter(prefix="/v2", tags=["live & analytics"])
+
+
+@lru_cache(maxsize=1)
+def _all_months():
+    frames = []
+    for m in ("2024-01", "2024-04", "2024-07"):
+        f = ROOT / "data" / "interim" / f"features-{m}.parquet"
+        if f.exists():
+            frames.append(pd.read_parquet(f))
+    if not frames:
+        return None
+    allm = pd.concat(frames, ignore_index=True)
+    return allm[allm["vessel_type_group"].isin(["cargo", "tanker", "passenger"])]
 
 
 def _load(name: str):
@@ -34,7 +50,15 @@ def _load(name: str):
         return pickle.load(f)
 
 
-from functools import lru_cache  # noqa: E402
+def _load_cat_levels() -> dict[str, list[str]]:
+    p = MODELS / "categoricals.json"
+    return json.loads(p.read_text()) if p.exists() else {}
+
+
+def _load_type_speeds() -> dict[str, float]:
+    p = MODELS / "type_speeds.json"
+    return json.loads(p.read_text()) if p.exists() else {}
+
 
 
 @lru_cache(maxsize=1)
@@ -172,8 +196,8 @@ def live_sar(lat: float = 60.1, lon: float = 24.9):
 
 @router.get("/live/bathymetry")
 def bathymetry(voyage_id: str | None = None, lat: float | None = None, lon: float | None = None):
-    """Depth profile along a historical voyage or at a point (ERDDAP etopo180)."""
-    df = _hist()
+    """Depth profile along a historical voyage or at a point (OpenTopoData ETOPO1)."""
+    df = _all_months()
     if df is None:
         raise HTTPException(503, "historical samples missing — run make data")
     if voyage_id:
@@ -610,3 +634,226 @@ def datasets_status():
                       "present": f.exists(),
                       "size_mb": round(f.stat().st_size / 1e6, 1) if f.exists() else 0})
     return {"datasets": items, "note": "raw archive data is re-downloadable via make data"}
+
+
+# ---------- prediction surface: GeoJSON route + drift cone + analogs ----------
+
+@router.get("/predict/route/{voyage_id}")
+def predict_route(voyage_id: str):
+    """Full prediction GeoJSON for a voyage: actual track, remaining great-circle leg,
+    drift cone from P10/P50/P90 spread, ETA markers. OSM-ready."""
+    df = _hist()
+    if df is None:
+        raise HTTPException(503, "historical samples missing")
+    try:
+        ex = [pd.read_parquet(ROOT / "data" / "interim" / f"features-{m}.parquet")
+              for m in ("2024-01", "2024-04", "2024-07")]
+        allm = pd.concat(ex, ignore_index=True)
+        allm = allm[allm["vessel_type_group"].isin(["cargo", "tanker", "passenger"])]
+    except Exception:  # noqa: BLE001
+        allm = df
+    s = allm[allm["voyage_id"] == voyage_id].sort_values("ts")
+    if s.empty:
+        raise HTTPException(404, "voyage not found in feature store")
+    import xgboost as xgb
+
+    def _xgb(name):
+        m = xgb.XGBRegressor(enable_categorical=True)
+        m.load_model(str(MODELS / name))
+        return m
+    q, m10, m90 = _xgb("eta-p50.json"), _xgb("eta-p10.json"), _xgb("eta-p90.json")
+    feats = ["lat", "lon", "remaining_distance_nm", "speed_kn", "sog_median_6h",
+             "distance_traveled_nm", "elapsed_h", "wind_speed_10m", "wind_gusts_10m",
+             "precipitation", "temperature_2m", "relative_humidity_2m",
+             "wave_height", "wave_period", "swell_wave_height",
+             "cos_wave_dir", "sin_wave_dir", "month_sin", "month_cos",
+             "hour_sin", "hour_cos", "vessel_length", "vessel_draft",
+             "hours_at_current_speed", "hours_at_type_speed", "hours_at_sog6",
+             "vessel_type_group", "region", "arr_port_idx", "dep_port_idx"]
+    X = s.copy()
+    X["speed_kn"] = X["sog"]
+    if "wave_direction" in X:
+        wd = np.deg2rad(X["wave_direction"])
+        X["cos_wave_dir"], X["sin_wave_dir"] = np.cos(wd), np.sin(wd)
+    else:
+        X["cos_wave_dir"] = X["sin_wave_dir"] = 0.0
+    ts_dt = pd.to_datetime(X["ts"], utc=True)
+    X["month"] = ts_dt.dt.month
+    X["hour"] = ts_dt.dt.hour
+    X["month_sin"] = np.sin(2 * np.pi * X["month"] / 12)
+    X["month_cos"] = np.cos(2 * np.pi * X["month"] / 12)
+    X["hour_sin"] = np.sin(2 * np.pi * X["hour"] / 24)
+    X["hour_cos"] = np.cos(2 * np.pi * X["hour"] / 24)
+    X["hours_at_current_speed"] = X["remaining_distance_nm"] / X["sog"].clip(lower=1)
+    type_speed = _load_type_speeds().get(str(X["vessel_type_group"].iloc[0]), 8.0)
+    X["hours_at_type_speed"] = X["remaining_distance_nm"] / max(type_speed, 2.0)
+    X["hours_at_sog6"] = X["remaining_distance_nm"] / X["sog_median_6h"].clip(lower=1)
+    X = X[feats].copy()
+    lv = _load_cat_levels()
+    for c in CATEGORICAL:
+        X[c] = pd.Categorical(X[c].astype(str), categories=lv[c])
+    p10 = m10.predict(X) if m10 else None
+    p50 = q.predict(X)
+    p90 = m90.predict(X) if m90 else None
+    coords = [[round(float(a), 4), round(float(b), 4)] for a, b in zip(s["lat"], s["lon"])]
+    last = coords[-1]
+    import math as _m
+    d_nm = float(s["remaining_distance_nm"].iloc[-1])
+    brg = float(s["cog"].iloc[-1]) if "cog" in s and not pd.isna(s["cog"].iloc[-1]) else 45.0
+    k = _m.pi / 180
+    dest_lat = last[0] + (d_nm / 60.0) * _m.cos(brg * k)
+    dest_lon = last[1] + (d_nm / 60.0) * _m.sin(brg * k) / max(_m.cos(last[0] * k), 0.2)
+    drift_half_width_nm = float(np.mean((np.asarray(p90) - np.asarray(p10)) / 2)) if p90 is not None else 6.0
+    # drift cone polygon: from last point to destination, widening half-width
+    steps = 12
+    right, left = [], []
+    for i in range(steps + 1):
+        t = i / steps
+        la = last[0] + (dest_lat - last[0]) * t
+        lo = last[1] + (dest_lon - last[1]) * t
+        w = (drift_half_width_nm / 60.0) * (0.25 + 0.75 * t) * 0.5
+        right.append([lo + w / max(_m.cos(la * k), 0.2), la + w])
+        left.append([lo - w / max(_m.cos(la * k), 0.2), la - w])
+    cone = [[*r] for r in right] + [*reversed(left)]
+    fc = {
+        "type": "FeatureCollection",
+        "features": [
+            {"type": "Feature", "properties": {"kind": "actual_track"},
+             "geometry": {"type": "LineString", "coordinates": coords}},
+            {"type": "Feature", "properties": {"kind": "remaining_leg"},
+             "geometry": {"type": "LineString",
+                          "coordinates": [last, [round(dest_lon, 4), round(dest_lat, 4)]]}},
+            {"type": "Feature", "properties": {"kind": "drift_cone",
+                                               "half_width_nm": round(drift_half_width_nm, 2)},
+             "geometry": {"type": "Polygon", "coordinates": [[*cone, cone[0]]]}},
+            {"type": "Feature", "properties": {"kind": "destination"},
+             "geometry": {"type": "Point",
+                          "coordinates": [round(dest_lon, 4), round(dest_lat, 4)]}},
+            {"type": "Feature", "properties": {"kind": "current_position"},
+             "geometry": {"type": "Point", "coordinates": last}},
+        ],
+    }
+    return {
+        "voyage_id": voyage_id, "geojson": fc,
+        "eta": {"p10_h": round(float(p10[-1]), 2) if p10 is not None else None,
+                "p50_h": round(float(p50[-1]), 2),
+                "p90_h": round(float(p90[-1]), 2) if p90 is not None else None},
+        "remaining_distance_nm": d_nm,
+        "vessel_type_group": str(s["vessel_type_group"].iloc[0]),
+        "samples": int(len(s)),
+    }
+
+
+@router.get("/predict/analogs/{voyage_id}")
+def predict_analogs(voyage_id: str, limit: int = 3):
+    """Historical analogs: real voyages with the same destination port and vessel-type
+    group — the reference backing for AI explanations."""
+    df = _hist()
+    if df is None:
+        raise HTTPException(503, "historical samples missing")
+    try:
+        ex = [pd.read_parquet(ROOT / "data" / "interim" / f"features-{m}.parquet")
+              for m in ("2024-01", "2024-04")]
+        allm = pd.concat([df] + ex, ignore_index=True)
+        allm = allm[allm["vessel_type_group"].isin(["cargo", "tanker", "passenger"])]
+    except Exception:  # noqa: BLE001
+        allm = df
+    base = allm[allm["voyage_id"] == voyage_id]
+    if base.empty:
+        raise HTTPException(404, "voyage not found")
+    vtype = base["vessel_type_group"].iloc[0]
+    dest = base["arr_port_idx"].iloc[0]
+    sims = allm[(allm["arr_port_idx"] == dest) & (allm["vessel_type_group"] == vtype)
+                & (allm["voyage_id"] != voyage_id)]
+    out = []
+    for vid, g in list(sims.groupby("voyage_id"))[:limit]:
+        out.append({"voyage_id": vid, "duration_h": round(float((pd.to_datetime(g["arr_ts"]).max()
+                    - pd.to_datetime(g["dep_ts"]).max()).total_seconds() / 3600), 1),
+                    "distance_nm": round(float(g["remaining_distance_nm"].max()), 1),
+                    "coords": [[round(float(a), 4), round(float(b), 4)]
+                               for a, b in zip(g.sort_values("ts")["lat"], g.sort_values("ts")["lon"])][:80],
+                    "vessel_type_group": vtype})
+    return {"analogs": out, "basis": "same destination port + vessel type group, real AIS tracks"}
+
+
+# ---------- AI explanation ----------
+
+@router.get("/ai/providers")
+def ai_providers():
+    return {"chain": ai.providers_status(),
+            "note": "first reachable provider serves; override with provider+model"}
+
+
+@router.post("/ai/explain")
+def ai_explain(body: dict):
+    voyage_id = body.get("voyage_id")
+    question = body.get("question") or (
+        "Why will this route drift tomorrow for this ship type, and what should the fleet team expect?")
+    provider = body.get("provider")
+    model = body.get("model")
+    if not voyage_id:
+        raise HTTPException(400, "voyage_id required")
+
+    allm = _all_months()
+    if allm is None:
+        raise HTTPException(503, "historical samples missing")
+    s = allm[allm["voyage_id"] == voyage_id]
+    if s.empty:
+        raise HTTPException(404, "voyage not found")
+    ev = REPORTS / "eval.json"
+    evals = json.loads(ev.read_text()) if ev.exists() else {}
+    imp = ", ".join(f["feature"] for f in evals.get("feature_importance", [])[:8])
+    mae = evals.get("global", {}).get("p50", {}).get("mae_h")
+
+    # weather forecast along the remaining leg (Open-Meteo, keyless)
+    last = s.sort_values("ts").iloc[-1]
+    wx = sources.open_meteo_forecast(float(last["lat"]), float(last["lon"]))
+    marine = sources.open_meteo_marine(float(last["lat"]), float(last["lon"]))
+
+    # historical analogs
+    try:
+        analogs = predict_analogs(voyage_id)["analogs"]
+    except HTTPException:
+        analogs = []
+
+    ctx = json.dumps({
+        "voyage": {"id": voyage_id,
+                   "vessel_type": str(s["vessel_type_group"].iloc[0]),
+                   "vessel_length_m": None if pd.isna(s["vessel_length"].iloc[0]) else float(s["vessel_length"].iloc[0]),
+                   "remaining_distance_nm": round(float(s["remaining_distance_nm"].iloc[-1]), 1),
+                   "speed_kn": round(float(s["sog"].iloc[-1] or 0), 1),
+                   "region": str(s["region"].iloc[0]),
+                   "month": str(pd.to_datetime(s['ts']).dt.month.iloc[0])},
+        "live_weather_forecast": wx,
+        "live_waves": marine,
+        "model_performance": {"test_mae_h": mae,
+                              "p10_p90_coverage": evals.get("coverage_p10_p90"),
+                              "top_features": imp},
+        "historical_analogs": [{"voyage_id": a["voyage_id"],
+                                "duration_h": a["duration_h"],
+                                "distance_nm": a["distance_nm"]} for a in analogs],
+    }, indent=1, default=str)
+
+    system = (
+        "You are Voyance's maritime AI analyst. Answer ONLY from the JSON context provided. "
+        "Structure the answer in parsed markdown with exactly these sections:"
+        "\n\n## Headline\n(one sentence)"
+        "\n\n## Why drift is expected\n(3-5 bullets citing concrete numbers from the context: wind, waves, vessel type, model error)"
+        "\n\n## Reference backing\n(bullets, each naming a historical voyage_id from historical_analogs, "
+        "its duration/distance, and the live weather values; reference the model's tested MAE)"
+        "\n\n## What to watch\n(2-3 bullets)"
+        "\n\nNever invent numbers not present in the context. Be concise.")
+    user = "Question: " + question + "\n\nContext JSON:\n" + ctx
+
+    result = ai.explain([{"role": "system", "content": system},
+                         {"role": "user", "content": user}],
+                        provider=provider, model=model)
+    if not result["provider"]:
+        raise HTTPException(503, json.dumps({"errors": result["errors"]}))
+    return {**result,
+            "voyage_id": voyage_id,
+            "references": [{"voyage_id": a["voyage_id"],
+                            "label": f"{a['vessel_type_group']} · {a['distance_nm']} nm · {a['duration_h']} h",
+                            "replay_url": f"/analytics?voyage={a['voyage_id']}"}
+                           for a in analogs],
+            "context_snapshot": json.loads(ctx)}

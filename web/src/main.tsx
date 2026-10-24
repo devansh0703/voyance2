@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard'
 import Research from './pages/Research'
 import Docs from './pages/Docs'
 import Live from './pages/Live'
+import Predict from './pages/Predict'
 import Analytics from './pages/Analytics'
 import './index.css'
 
@@ -18,6 +19,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/" element={<Landing />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/live" element={<Live />} />
+        <Route path="/predict" element={<Predict />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/research" element={<Research />} />
         <Route path="/docs" element={<Docs />} />
