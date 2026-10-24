@@ -204,8 +204,12 @@ function MapTab() {
         if (mapRef.current.getSource('optimal')) (mapRef.current.getSource('optimal') as any).setData(line)
         else {
           mapRef.current.addSource('optimal', { type: 'geojson', data: line })
+          mapRef.current.addLayer({ id: 'optimal-casing', type: 'line', source: 'optimal',
+            layout: { 'line-cap': 'round', 'line-join': 'round' },
+            paint: { 'line-color': '#ffffff', 'line-width': 8, 'line-opacity': 0.9 } })
           mapRef.current.addLayer({ id: 'optimal-l', type: 'line', source: 'optimal',
-            paint: { 'line-color': '#a86a00', 'line-width': 2.5, 'line-dasharray': [2, 2] } })
+            layout: { 'line-cap': 'butt', 'line-join': 'round' },
+            paint: { 'line-color': '#7a4a00', 'line-width': 4, 'line-dasharray': [3, 2] } })
         }
       }).catch(() => {})
   }, [v, mapReady])
@@ -219,7 +223,7 @@ function MapTab() {
           <div className="flex gap-2">
             <span className="chip" style={{ color: '#5d675f' }}>all voyages (faint)</span>
             <span className="chip" style={{ color: '#0e6e5c', borderColor: '#0e6e5c' }}>SELECTED — bold teal + white casing</span>
-            <span className="chip" style={{ color: '#a86a00' }}>optimal (A*)</span>
+            <span className="chip" style={{ color: '#7a4a00', borderColor: '#7a4a00' }}>OPTIMAL (A*) — dark amber dashed</span>
             <span className="chip chip-bad">dark vessel</span>
           </div>
         </div>

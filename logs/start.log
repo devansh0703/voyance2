@@ -669,3 +669,33 @@ INFO:     127.0.0.1:42546 - "GET /assets/maplibre-gl-worker.mjs?v=6.15.0 HTTP/1.
 INFO:     127.0.0.1:42534 - "GET /data/stats.json HTTP/1.1" 200 OK
 INFO:     127.0.0.1:42546 - "GET /v2/analytics/route?src=4241&dst=3921&algorithm=astar HTTP/1.1" 200 OK
 INFO:     127.0.0.1:42546 - "GET /v2/analytics/route?src=4024&dst=4513&algorithm=astar HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40558 - "GET /v2/analytics/darkvessels?limit=30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40574 - "GET /data/stats.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40574 - "GET /v2/analytics/route?src=4241&dst=3921&algorithm=astar HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35682 - "GET /v1/metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35688 - "GET /data/stats.json HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56292 - "GET /data/map.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56286 - "GET /v2/analytics/darkvessels?limit=30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56286 - "GET /data/stats.json HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:56286 - "GET /v2/analytics/route?src=4241&dst=3921&algorithm=astar HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46266 - "GET /dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46266 - "GET /assets/index-BnHJpbDw.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46268 - "GET /assets/index-xy8cGGuc.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46268 - "GET /data/map.json HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:46266 - "GET /v2/analytics/darkvessels?limit=30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46268 - "GET /assets/maplibre-gl-worker.mjs?v=6.15.0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46278 - "GET /data/stats.json HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:46268 - "GET /v2/analytics/route?src=4241&dst=3921&algorithm=astar HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52252 - "GET /dashboard?v=3 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52252 - "GET /assets/index-vKmzni7N.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52252 - "GET /v2/analytics/darkvessels?limit=30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52252 - "GET /v2/analytics/route?src=4241&dst=3921&algorithm=astar HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41056 - "GET /v2/analytics/route?src=4024&dst=4513&algorithm=astar HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53132 - "GET /dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53132 - "GET /assets/index-vKmzni7N.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53134 - "GET /assets/index-xy8cGGuc.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53134 - "GET /data/map.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53132 - "GET /v2/analytics/darkvessels?limit=30 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53138 - "GET /data/stats.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53134 - "GET /assets/maplibre-gl-worker.mjs?v=6.15.0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53134 - "GET /v2/analytics/route?src=4241&dst=3921&algorithm=astar HTTP/1.1" 200 OK
