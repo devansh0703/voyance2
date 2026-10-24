@@ -191,27 +191,38 @@ function MapTab() {
     }
   }, [dark, mapReady])
 
-  // optimal (A*) vs actual: dashed amber optimal line between dep/arr ports
+  // optimal vs actual: A* port-hops when the graph connects them, great-circle
+  // straight line otherwise — a comparison line ALWAYS renders, labeled by method
   useEffect(() => {
     const map = mapRef.current
     if (!mapReady || !map || !v) return
+    const drawOptimal = (coords: [number, number][], method: string, nm?: number) => {
+      const m = mapRef.current
+      if (!m) return
+      const line = { type: 'Feature', geometry: { type: 'LineString', coordinates: coords },
+        properties: {} }
+      if (m.getSource('optimal')) (m.getSource('optimal') as any).setData(line)
+      else {
+        m.addSource('optimal', { type: 'geojson', data: line })
+        m.addLayer({ id: 'optimal-casing', type: 'line', source: 'optimal',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': '#ffffff', 'line-width': 8, 'line-opacity': 0.9 } })
+        m.addLayer({ id: 'optimal-l', type: 'line', source: 'optimal',
+          layout: { 'line-cap': 'butt', 'line-join': 'round' },
+          paint: { 'line-color': '#7a4a00', 'line-width': 4, 'line-dasharray': [3, 2] } })
+      }
+      setOptimal({ method, distance_nm: nm })
+    }
     fetch(`${API}/v2/analytics/route?src=${v.dep_port_idx}&dst=${v.arr_port_idx}&algorithm=astar`)
-      .then((r) => r.json()).then((d) => {
-        if (!d?.path_coords?.length || !mapRef.current) { setOptimal(null); return }
-        setOptimal(d)
-        const line = { type: 'Feature', geometry: { type: 'LineString', coordinates: d.path_coords },
-          properties: {} }
-        if (mapRef.current.getSource('optimal')) (mapRef.current.getSource('optimal') as any).setData(line)
-        else {
-          mapRef.current.addSource('optimal', { type: 'geojson', data: line })
-          mapRef.current.addLayer({ id: 'optimal-casing', type: 'line', source: 'optimal',
-            layout: { 'line-cap': 'round', 'line-join': 'round' },
-            paint: { 'line-color': '#ffffff', 'line-width': 8, 'line-opacity': 0.9 } })
-          mapRef.current.addLayer({ id: 'optimal-l', type: 'line', source: 'optimal',
-            layout: { 'line-cap': 'butt', 'line-join': 'round' },
-            paint: { 'line-color': '#7a4a00', 'line-width': 4, 'line-dasharray': [3, 2] } })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d: any) => {
+        if (d?.path_coords?.length && d.path_coords.length >= 2) {
+          drawOptimal(d.path_coords, `A* port-hops (${d.path_coords.length} ports)`, d.distance_nm)
+        } else {
+          drawOptimal([v.coords[0], v.coords[v.coords.length - 1]], 'great-circle (no A* path)')
         }
-      }).catch(() => {})
+      })
+      .catch(() => drawOptimal([v.coords[0], v.coords[v.coords.length - 1]], 'great-circle (no A* path)'))
   }, [v, mapReady])
 
   return (
@@ -229,7 +240,7 @@ function MapTab() {
         </div>
         {v && optimal && (
           <div className="panel px-3 py-2">
-            <span className="chip chip-ok">optimal route {optimal.distance_nm} nm via A* — deviation badge: nominal</span>
+            <span className="chip chip-ok">optimal: {optimal.method}{optimal.distance_nm ? ` · ${optimal.distance_nm} nm` : ''} vs actual</span>
             <span className="microtype ml-2">dashed amber = A* optimal · solid teal = actual track</span>
           </div>
         )}
