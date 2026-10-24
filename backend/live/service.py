@@ -575,7 +575,7 @@ def analytics_replay(voyage_id: str):
         f = analytics.fuel_consumption_t_per_day(max(v, 1), wd, float(s["vessel_length"].iloc[0] or 180), 50000)
         fuel_pts.append(round(f["fuel_t_per_day"], 2))
     return {"voyage_id": voyage_id,
-            "coords": [[round(float(a), 4), round(float(b), 4)] for a, b in zip(s["lat"], s["lon"])],
+            "coords": [[round(float(b), 4), round(float(a), 4)] for a, b in zip(s["lat"], s["lon"])],
             "sog": [round(float(x), 2) for x in sog],
             "sog_smoothed": [round(float(x), 2) for x in smoothed],
             "ts": ts, "gaps": gaps, "fsm": algo2.fsm_sequence(sog),
@@ -695,26 +695,28 @@ def predict_route(voyage_id: str):
     p10 = m10.predict(X) if m10 else None
     p50 = q.predict(X)
     p90 = m90.predict(X) if m90 else None
-    coords = [[round(float(a), 4), round(float(b), 4)] for a, b in zip(s["lat"], s["lon"])]
-    last = coords[-1]
+    coords = [[round(float(b), 4), round(float(a), 4)] for a, b in zip(s["lat"], s["lon"])]  # GeoJSON = [lon, lat]
+    last = coords[-1]          # [lon, lat]
     import math as _m
     d_nm = float(s["remaining_distance_nm"].iloc[-1])
     brg = float(s["cog"].iloc[-1]) if "cog" in s and not pd.isna(s["cog"].iloc[-1]) else 45.0
     k = _m.pi / 180
-    dest_lat = last[0] + (d_nm / 60.0) * _m.cos(brg * k)
-    dest_lon = last[1] + (d_nm / 60.0) * _m.sin(brg * k) / max(_m.cos(last[0] * k), 0.2)
-    drift_half_width_nm = float(np.mean((np.asarray(p90) - np.asarray(p10)) / 2)) if p90 is not None else 6.0
+    dest_lat = last[1] + (d_nm / 60.0) * _m.cos(brg * k)
+    dest_lon = last[0] + (d_nm / 60.0) * _m.sin(brg * k) / max(_m.cos(last[1] * k), 0.2)
+    drift_half_width_nm = max(float(np.mean((np.asarray(p90) - np.asarray(p10)) / 2)), 0.25) if p90 is not None else 6.0
     # drift cone polygon: from last point to destination, widening half-width
+    # last = [lon, lat]; interpolate in true lat/lon, emit GeoJSON [lon, lat]
     steps = 12
+    lon0, lat0 = last[0], last[1]
     right, left = [], []
     for i in range(steps + 1):
         t = i / steps
-        la = last[0] + (dest_lat - last[0]) * t
-        lo = last[1] + (dest_lon - last[1]) * t
+        la = lat0 + (dest_lat - lat0) * t
+        lo = lon0 + (dest_lon - lon0) * t
         w = (drift_half_width_nm / 60.0) * (0.25 + 0.75 * t) * 0.5
-        right.append([lo + w / max(_m.cos(la * k), 0.2), la + w])
-        left.append([lo - w / max(_m.cos(la * k), 0.2), la - w])
-    cone = [[*r] for r in right] + [*reversed(left)]
+        right.append([round(lo + w / max(_m.cos(la * k), 0.2), 4), round(la + w, 4)])
+        left.append([round(lo - w / max(_m.cos(la * k), 0.2), 4), round(la - w, 4)])
+    cone = right + list(reversed(left))
     fc = {
         "type": "FeatureCollection",
         "features": [
@@ -770,7 +772,7 @@ def predict_analogs(voyage_id: str, limit: int = 3):
         out.append({"voyage_id": vid, "duration_h": round(float((pd.to_datetime(g["arr_ts"]).max()
                     - pd.to_datetime(g["dep_ts"]).max()).total_seconds() / 3600), 1),
                     "distance_nm": round(float(g["remaining_distance_nm"].max()), 1),
-                    "coords": [[round(float(a), 4), round(float(b), 4)]
+                    "coords": [[round(float(b), 4), round(float(a), 4)]
                                for a, b in zip(g.sort_values("ts")["lat"], g.sort_values("ts")["lon"])][:80],
                     "vessel_type_group": vtype})
     return {"analogs": out, "basis": "same destination port + vessel type group, real AIS tracks"}

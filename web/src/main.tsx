@@ -1,3 +1,4 @@
+import React from 'react'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
@@ -12,8 +13,26 @@ import Voyage from './pages/Voyage'
 import Analytics from './pages/Analytics'
 import './index.css'
 
+class Boundary extends React.Component<{ children: React.ReactNode }, { err: any | null }> {
+  state: { err: any } = { err: null }
+  static getDerivedStateFromError(err: any) { return { err } }
+  render() {
+    if (this.state.err) {
+      return (
+        <div style={{ background: '#fff', color: '#c2402e', fontFamily: 'monospace', padding: 24, whiteSpace: 'pre-wrap' }}>
+          <b>render error (report this):</b>{'\n'}
+          {String(this.state.err?.message ?? this.state.err)}{'\n\n'}
+          {String(this.state.err?.stack ?? '').slice(0, 900)}
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    <Boundary>
     <BrowserRouter>
       <Nav />
       <Routes>
@@ -27,5 +46,6 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/docs" element={<Docs />} />
       </Routes>
     </BrowserRouter>
+    </Boundary>
   </StrictMode>,
 )

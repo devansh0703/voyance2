@@ -47,6 +47,14 @@ from backend.live.service import router as live_router, _usage  # noqa: E402
 app.include_router(live_router)
 
 
+@app.middleware("http")
+async def _no_store_api(request, call_next):
+    resp = await call_next(request)
+    if request.url.path.startswith(("/v1", "/v2", "/data")):
+        resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
 class _UsageMiddleware:
     def __init__(self, app):
         self.app = app
