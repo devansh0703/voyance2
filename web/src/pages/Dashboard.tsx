@@ -4,6 +4,7 @@ import Globe from 'globe.gl'
 import * as echarts from 'echarts'
 import { Footer, Reveal } from '../components/chrome'
 import type { DriftJson, EvalJson, MapJson, StatsJson } from '../lib/data'
+import { Link } from 'react-router-dom'
 import { useArtifact } from '../lib/data'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { voyanceMapStyle } from '../lib/mapstyle'
@@ -37,6 +38,12 @@ function MapTab() {
   const [mapReady, setMapReady] = useState(false)
   const [dark, setDark] = useState<any[]>([])
   const [optimal, setOptimal] = useState<any>(null)
+  const [q, setQ] = useState('')
+  const all = mapJson?.voyages ?? []
+  const filtered = q
+    ? all.filter((vo) =>
+        (vo.dep_port + ' ' + vo.arr_port + ' ' + vo.vessel_type_group).toLowerCase().includes(q.toLowerCase()))
+    : all
 
   useEffect(() => {
     fetch(API + '/v2/analytics/darkvessels?limit=30').then((r) => r.json())
@@ -55,6 +62,46 @@ function MapTab() {
   }, [])
 
   const v = mapJson?.voyages?.[sel]
+
+  // every voyage at once — faint lines, click to select
+  useEffect(() => {
+    const map = mapRef.current
+    if (!mapReady || !map || !all.length) return
+    const fc = {
+      type: 'FeatureCollection',
+      features: all.map((vo) => ({
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: vo.coords },
+        properties: { idx: all.indexOf(vo), dep: vo.dep_port, arr: vo.arr_port },
+      })),
+    } as any
+    if (map.getSource('all-voyages')) (map.getSource('all-voyages') as any).setData(fc)
+    else {
+      map.addSource('all-voyages', { type: 'geojson', data: fc })
+      map.addLayer({ id: 'all-lines', type: 'line', source: 'all-voyages',
+        paint: { 'line-color': '#0e6e5c', 'line-width': 1.4, 'line-opacity': 0.35 } })
+    }
+    if (!map.getLayer('all-lines')) return
+    map.off('click', 'all-lines', (map as any)._voyageClick)
+    const handler = (e: any) => {
+      const f = e.features?.[0]
+      if (f) setSel(Number(f.properties.idx))
+    }
+    ;(map as any)._voyageClick = handler
+    map.on('click', 'all-lines', handler)
+    map.on('mouseenter', 'all-lines', () => (map.getCanvas().style.cursor = 'pointer'))
+    map.on('mouseleave', 'all-lines', () => (map.getCanvas().style.cursor = ''))
+  }, [all, mapReady])
+
+  // fit to ALL voyages on first load so the whole traffic picture is visible
+  useEffect(() => {
+    const map = mapRef.current
+    if (!mapReady || !map || !all.length || map.getLayer('all-lines') === undefined) return
+    const lons: number[] = []; const lats: number[] = []
+    all.forEach((vo) => vo.coords.forEach(([x, y]) => { lons.push(x); lats.push(y) }))
+    map.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]],
+      { padding: 40, duration: 0 })
+  }, [all, mapReady])
 
   useEffect(() => {
     const map = mapRef.current
@@ -160,7 +207,8 @@ function MapTab() {
         <div className="panel px-3 py-2 flex items-center justify-between">
           <span className="microtype">legend</span>
           <div className="flex gap-2">
-            <span className="chip" style={{ color: '#0e6e5c' }}>actual</span>
+            <span className="chip" style={{ color: '#0e6e5c' }}>all voyages (faint)</span>
+            <span className="chip" style={{ color: '#0e6e5c' }}>selected</span>
             <span className="chip" style={{ color: '#a86a00' }}>optimal (A*)</span>
             <span className="chip chip-bad">dark vessel</span>
           </div>
@@ -171,24 +219,40 @@ function MapTab() {
             <span className="microtype ml-2">dashed amber = A* optimal · solid teal = actual track</span>
           </div>
         )}
-        {!mapJson ? <NotReady what="Showcase voyages" /> :
-          mapJson.voyages.slice(0, 12).map((vo, i) => (
-            <button
-              key={vo.voyage_id}
-              onClick={() => setSel(i)}
-              className={`bento px-4 py-3 text-left text-sm ${i === sel ? 'border-bio/50' : ''}`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-medium">{vo.dep_port} → {vo.arr_port}</span>
-                <span className={`font-[family-name:var(--font-mono)] text-xs ${(vo.err_pct ?? 0) > 0.2 ? 'text-signal' : 'text-bio'}`}>
-                  {vo.duration_h.toFixed(1)} h
-                </span>
-              </div>
-              <div className="mt-1 text-xs text-mist">
-                {vo.vessel_type_group} · mean err {vo.err_pct == null ? '—' : `${(vo.err_pct * 100).toFixed(1)}%`}
-              </div>
-            </button>
-          ))}
+        <div className="panel px-3 py-2 flex items-center gap-2">
+          <span className="microtype">voyages</span>
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="search port / type…"
+            className="mono flex-1 bg-transparent text-xs text-paper outline-none placeholder:text-dim"
+          />
+          <span className="chip">{filtered.length}/{all.length}</span>
+        </div>
+        <div className="flex flex-col gap-1.5 overflow-y-auto" style={{ maxHeight: 420 }}>
+          {!mapJson ? <NotReady what="Showcase voyages" /> :
+            filtered.map((vo) => {
+              const i = all.indexOf(vo)
+              return (
+                <button
+                  key={vo.voyage_id}
+                  onClick={() => setSel(i)}
+                  className={`bento px-4 py-2.5 text-left text-sm ${i === sel ? 'border-bio/50' : ''}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium truncate" style={{ maxWidth: 190 }}>{vo.dep_port} → {vo.arr_port}</span>
+                    <span className={`font-[family-name:var(--font-mono)] text-xs ${(vo.err_pct ?? 0) > 0.2 ? 'text-bad' : 'color-ok'}`}>
+                      {vo.duration_h.toFixed(1)} h
+                    </span>
+                  </div>
+                  <div className="mt-0.5 text-xs text-dim flex items-center justify-between">
+                    <span>{vo.vessel_type_group} · err {vo.err_pct == null ? '—' : `${(vo.err_pct * 100).toFixed(1)}%`}</span>
+                    <Link to={`/voyage/${vo.voyage_id}`} className="chip chip-acc">dossier →</Link>
+                  </div>
+                </button>
+              )
+            })}
+        </div>
       </div>
     </div>
   )

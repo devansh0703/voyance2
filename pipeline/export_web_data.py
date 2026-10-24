@@ -76,7 +76,7 @@ def export_map(frames: dict[str, pd.DataFrame], voy: dict[str, pd.DataFrame]):
     for m, df in frames.items():
         v = voy[m]
         top = (v.sort_values("voyage_distance_nm", ascending=False)
-                .drop_duplicates("mmsi").head(60))
+                .drop_duplicates("mmsi").head(150))
         samples_by_voy = {k: d for k, d in df.groupby("voyage_id")}
         for _, row in top.iterrows():
             s = samples_by_voy.get(row["voyage_id"])
@@ -113,7 +113,7 @@ def export_voyages_api(frames: dict[str, pd.DataFrame], voy: dict[str, pd.DataFr
     pn = port_names()
     items = []
     for m, v in voy.items():
-        for _, row in v.head(400).iterrows():
+        for _, row in v.iterrows():
             items.append({
                 "voyage_id": row["voyage_id"], "mmsi": int(row["mmsi"]),
                 "vessel_type_group": row["vessel_type_group"],

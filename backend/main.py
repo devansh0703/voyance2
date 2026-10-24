@@ -256,6 +256,7 @@ if WEB_DIST.exists():
 
     @app.get("/")
     @app.get("/dashboard")
+    @app.get("/voyage/{rest}")
     @app.get("/predict")
     @app.get("/live")
     @app.get("/analytics")
