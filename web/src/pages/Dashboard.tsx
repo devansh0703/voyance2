@@ -79,7 +79,7 @@ function MapTab() {
     else {
       map.addSource('all-voyages', { type: 'geojson', data: fc })
       map.addLayer({ id: 'all-lines', type: 'line', source: 'all-voyages',
-        paint: { 'line-color': '#0e6e5c', 'line-width': 1.4, 'line-opacity': 0.35 } })
+        paint: { 'line-color': '#0e6e5c', 'line-width': 1.2, 'line-opacity': 0.22 } })
     }
     if (!map.getLayer('all-lines')) return
     map.off('click', 'all-lines', (map as any)._voyageClick)
@@ -117,16 +117,26 @@ function MapTab() {
     if (map.getSource('route')) (map.getSource('route') as any).setData(src.data)
     else {
       map.addSource('route', src)
+      // white casing makes the selected track unmistakable over the faint crowd
+      map.addLayer({
+        id: 'route-casing',
+        type: 'line',
+        source: 'route',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#ffffff', 'line-width': 9, 'line-opacity': 0.95 },
+      })
       map.addLayer({
         id: 'route-line',
         type: 'line',
         source: 'route',
-        paint: {
-          'line-color': '#0e6e5c',
-          'line-width': 3,
-          'line-opacity': 0.9,
-        },
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#0e6e5c', 'line-width': 4.5, 'line-opacity': 1 },
       })
+    }
+    // dim the other voyages so the selection dominates
+    if (map.getLayer('all-lines')) {
+      map.setPaintProperty('all-lines', 'line-opacity', 0.14)
+      map.setPaintProperty('all-lines', 'line-width', 1)
     }
     const srcs: any = {
       type: 'geojson',
@@ -207,8 +217,8 @@ function MapTab() {
         <div className="panel px-3 py-2 flex items-center justify-between">
           <span className="microtype">legend</span>
           <div className="flex gap-2">
-            <span className="chip" style={{ color: '#0e6e5c' }}>all voyages (faint)</span>
-            <span className="chip" style={{ color: '#0e6e5c' }}>selected</span>
+            <span className="chip" style={{ color: '#5d675f' }}>all voyages (faint)</span>
+            <span className="chip" style={{ color: '#0e6e5c', borderColor: '#0e6e5c' }}>SELECTED — bold teal + white casing</span>
             <span className="chip" style={{ color: '#a86a00' }}>optimal (A*)</span>
             <span className="chip chip-bad">dark vessel</span>
           </div>
