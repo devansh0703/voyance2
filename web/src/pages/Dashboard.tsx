@@ -463,61 +463,66 @@ function ModelTab() {
 function DriftTab() {
   const drift = useArtifact<DriftJson>('drift.json', 'drift')
   if (!drift) return <NotReady what="Drift reports" />
-  const alerts = drift.weeks.filter((w) => w.alert)
+  const weeks: any[] = drift.weeks ?? []
+  const alerts = weeks.filter((w) => w.alert)
   return (
     <div className="space-y-4">
       {alerts.length > 0 && (
-        <div className="rounded-2xl border border-signal/40 bg-signal/10 p-4 text-sm">
-          <span className="font-semibold text-signal">Drift alerts:</span>{' '}
-          {alerts.map((a) => `week of ${a.week} (MAE ×${a.mae_ratio.toFixed(2)})`).join(' · ')}
+        <div className="rounded-2xl border p-4 text-sm" style={{ borderColor: 'var(--color-bad)', background: 'rgba(194,64,46,0.08)' }}>
+          <span className="font-semibold" style={{ color: 'var(--color-bad)' }}>Drift alerts:</span>{' '}
+          {alerts.map((a) => `${a.slice ?? a.week} (MAE ×${(a.mae_ratio_vs_test_overall ?? a.mae_ratio ?? 0).toFixed(2)})`).join(' · ')}
         </div>
       )}
-      <div className="bento p-4">
+      <div className="panel-flat p-4">
         <EChart
           option={{
-            title: { text: `Weekly MAE ratio vs ${drift.baseline} baseline (monitor: ${drift.monitor})`, textStyle: { color: '#e8f4f8', fontSize: 14 } },
-            tooltip: { trigger: 'axis' },
+            title: { text: `Slice MAE ratio vs reference (baseline ${drift.baseline ?? ''})`, textStyle: { color: '#17201b', fontSize: 13 } },
+            tooltip: { trigger: 'axis' as const },
             grid: { left: 50, right: 20, bottom: 50, top: 40 },
-            xAxis: { type: 'category' as const, data: drift.weeks.map((w) => w.week), axisLabel: { fontSize: 10 } },
+            xAxis: { type: 'category' as const, data: weeks.map((w) => w.slice ?? w.week), axisLabel: { fontSize: 10 } },
             yAxis: { type: 'value' as const, name: 'MAE ratio' },
             series: [
-              { type: 'line' as const, data: drift.weeks.map(() => 1), lineStyle: { color: 'rgba(159,194,209,0.4)', type: 'dashed' }, symbol: 'none', name: 'baseline' },
+              { type: 'line' as const, data: weeks.map(() => 1), lineStyle: { color: 'rgba(93,103,95,0.5)', type: 'dashed' }, symbol: 'none', name: 'reference' },
               {
-                type: 'line' as const, data: drift.weeks.map((w) => w.mae_ratio), smooth: true,
-                lineStyle: { color: '#ffd166', width: 2 }, itemStyle: { color: '#ffd166' }, name: 'monitor',
+                type: 'line' as const, data: weeks.map((w) => w.mae_ratio_vs_test_overall ?? w.mae_ratio ?? null), smooth: true,
+                lineStyle: { color: '#a86a00', width: 2 }, itemStyle: { color: '#a86a00' }, name: 'monitor',
               },
             ],
           }}
         />
       </div>
-      <div className="glass overflow-x-auto rounded-2xl">
-        <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="text-mist/80">
-            <tr className="border-b border-mist/10">
-              <th className="px-4 py-3 font-medium">Week</th>
+      <div className="panel overflow-x-auto">
+        <table className="dense">
+          <thead>
+            <tr className="border-b" style={{ borderBottom: '1px solid var(--color-rule)' }}>
+              <th className="px-4 py-3 font-medium">Slice</th>
+              <th className="px-4 py-3 font-medium">Rows</th>
               <th className="px-4 py-3 font-medium">MAE (h)</th>
-              <th className="px-4 py-3 font-medium">Ratio vs baseline</th>
+              <th className="px-4 py-3 font-medium">Ratio vs reference</th>
               <th className="px-4 py-3 font-medium">Drifted features (PSI&gt;0.2)</th>
               <th className="px-4 py-3 font-medium">Alert</th>
             </tr>
           </thead>
           <tbody>
-            {drift.weeks.map((w) => (
-              <tr key={w.week} className="border-b border-mist/5">
-                <td className="px-4 py-3 font-mono text-xs">{w.week}</td>
-                <td className="px-4 py-3">{w.mae_h.toFixed(2)}</td>
-                <td className="px-4 py-3">{w.mae_ratio.toFixed(2)}</td>
-                <td className="px-4 py-3 text-mist">
-                  {w.drifted_features.length
-                    ? w.drifted_features.map((f) => `${f.feature} (${f.psi.toFixed(2)})`).join(', ')
-                    : '—'}
-                </td>
-                <td className="px-4 py-3">
-                  {w.alert ? <span className="rounded bg-signal/20 px-2 py-0.5 text-xs text-signal">ALERT</span>
-                    : <span className="rounded bg-bio/10 px-2 py-0.5 text-xs text-bio">ok</span>}
-                </td>
-              </tr>
-            ))}
+            {weeks.map((w, i) => {
+              const ratio = w.mae_ratio_vs_test_overall ?? w.mae_ratio
+              const psi = w.psi_own ?? {}
+              const drifted = (w.drifted_features ?? []).length
+                ? (w.drifted_features ?? []).map((f: any) => `${f.feature} (${(f.psi ?? 0).toFixed(2)})`).join(', ')
+                : Object.entries(psi).filter(([, v]: any) => v > 0.2).map(([k, v]: any) => `${k} (${v.toFixed(2)})`).join(', ') || '—'
+              return (
+                <tr key={i} className="border-b" style={{ borderBottom: '1px solid #e4e7df' }}>
+                  <td className="px-4 py-3 font-mono text-xs">{w.slice ?? w.week}</td>
+                  <td className="px-4 py-3">{(w.n ?? 0).toLocaleString()}</td>
+                  <td className="px-4 py-3">{(w.mae_h ?? 0).toFixed(2)}</td>
+                  <td className="px-4 py-3">{ratio != null ? ratio.toFixed(2) : '—'}</td>
+                  <td className="px-4 py-3 text-dim">{drifted}</td>
+                  <td className="px-4 py-3">
+                    {w.alert ? <span className="chip chip-bad">ALERT</span> : <span className="chip chip-ok">ok</span>}
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>

@@ -59,17 +59,23 @@ export interface EvalJson {
   daily_mae: Record<string, number>
 }
 
+export interface DriftWeek {
+  slice?: string
+  week?: string
+  n: number
+  mae_h: number
+  mae_ratio_vs_test_overall?: number | null
+  drifted_features: { feature: string; psi: number }[]
+  psi_own?: Record<string, number>
+  alert: boolean
+}
+
 export interface DriftJson {
   baseline: string
-  monitor: string
-  weeks: {
-    week: string
-    mae_h: number
-    mae_ratio: number
-    drifted_features: { feature: string; psi: number; ks_pvalue: number }[]
-    alert: boolean
-  }[]
-  n_drifted_features_total: number
+  monitor: string | string[]
+  reference_mae_h?: number
+  weeks: DriftWeek[]
+  n_drifted_features_total?: number
 }
 
 export interface StatsJson {
